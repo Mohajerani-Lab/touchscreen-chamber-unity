@@ -1,48 +1,38 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Xml;
+using System.Xml.Serialization;
+using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Android;
 using UnityEngine.Serialization;
 
 namespace DefaultNamespace
 {
     public class XmlReader : MonoBehaviour
     {
-        [SerializeField] private string rootFolder;
-
-        private void Start()
+        public static string LoadXmlString(string path)
         {
-            rootFolder = Application.platform switch
-            {
-                RuntimePlatform.Android => "/storage/emulated/0/SmoothWalk",
-                RuntimePlatform.WindowsPlayer =>
-                    $"{Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments)}/TouchScreen-Trial-Game-Data",
-                RuntimePlatform.WindowsEditor =>
-                    $"{Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments)}/TouchScreen-Trial-Game-Data",
-                _ => Application.persistentDataPath
-            };
-            
-            Debug.Log($"Data path: {rootFolder}");
-            if (Directory.Exists(rootFolder)) return;
-            Debug.Log("Creating data root folder...");
-            Directory.CreateDirectory(rootFolder);
+            return File.ReadAllText(path);
         }
 
-        public static void LoadXml(string path)
+        public static IEnumerable<string> ListConfigFiles()
         {
-            // var doc = new XmlDocument();
-            // // doc.Load(path);
-            // var elem = doc.CreateElement("bk", "genre", "urn:samples");
-            // elem.InnerText = "Hi";
-            // doc.DocumentElement?.AppendChild(elem);
-        }
-
-        public void ListFiles()
-        {
-            foreach (var file in Directory.GetFiles(rootFolder))
+            try
             {
-                Debug.Log(file);
+                return Directory.GetFiles($"{GameManager.Instance.RootFolder}/Data").Where(file => file.EndsWith("xml"))
+                    .Select(Path.GetFileName).ToArray();
             }
+            catch (UnauthorizedAccessException e)
+            {
+                Debug.Log("Storage permission not given, change settings and run app again.");
+            }
+
+            return null;
         }
     }
 }

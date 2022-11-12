@@ -13,7 +13,7 @@ public class Client : MonoBehaviour
     private string _id;
     private string _clientName = "LabCage1";
     [SerializeField] private string uri = "http://localhost:3000";
-    [SerializeField] private PlayerController controller;
+    [SerializeField] private ObjectController controller;
 
     // public Client()
     // {
@@ -64,7 +64,7 @@ public class Client : MonoBehaviour
         Socket.On("rotate", _ =>
         {
             Debug.Log("Rotate command received");
-            controller.rotateEnabled = !controller.rotateEnabled;
+            controller.RotateEnabled = !controller.RotateEnabled;
         });
     }
 

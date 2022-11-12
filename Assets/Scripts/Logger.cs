@@ -1,19 +1,22 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
+using System.IO;
+using DefaultNamespace;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class Logger : MonoBehaviour
 {
-    private string _logMsg = "";
-    private TextMeshProUGUI _logDisplay;
+    private string _logMsgs = "";
+    private string _logMsgsTemp = "";
+    [SerializeField] private TextMeshProUGUI logDisplay;
+    private string _sessionName;
+    private string _reportDirectory;
 
     private void Start()
     {
-        _logDisplay = gameObject.GetComponentInChildren<TextMeshProUGUI>();
-        Debug.Log("Logger initialized.");
+        // logDisplay = gameObject.GetComponentInChildren<TextMeshProUGUI>();
+        _sessionName = "Touchscreen-Trial-Game-" + DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+        Debug.Log($"Logger initialized. Session Name: {_sessionName}");
     }
 
     private void OnEnable()
@@ -34,14 +37,40 @@ public class Logger : MonoBehaviour
             newString = stackTrace + "\n";
         }
 
-        _logMsg += newString;
-        // _logDisplay.text += newString;
+        _logMsgs += newString;
+        _logMsgsTemp += newString;
     }
 
     private void Update()
     {
-        _logDisplay.text = _logMsg;
+        logDisplay.text = _logMsgsTemp;
     }
+
+    public void ClearLogDisplay()
+    {
+        _logMsgsTemp = "";
+    }
+
+    public void SaveLogsToDisk()
+    {
+        _reportDirectory = Path.Combine(GameManager.Instance.RootFolder, "Reports");
+        if (!Directory.Exists(_reportDirectory))
+        {
+            Debug.Log("Creating reports folder...");
+            Directory.CreateDirectory(_reportDirectory);
+        }
+
+        Debug.Log("Saving logs...");
+        
+        var writer = new StreamWriter( $"{Path.Combine(_reportDirectory, _sessionName)}.txt");
+        writer.Write(_logMsgs);
+        writer.Close();
+    }
+
+    // private void OnApplicationQuit()
+    // {
+    //     SaveLogsToDisk();
+    // }
 }
 
 
