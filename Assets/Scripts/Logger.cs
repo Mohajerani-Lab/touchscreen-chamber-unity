@@ -1,11 +1,40 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using DefaultNamespace;
 using TMPro;
 using UnityEngine;
 
 public class Logger : MonoBehaviour
 {
+    
+    
+    private class LogObject
+    {
+        private readonly string _message;
+        private readonly LogType _type;
+        private readonly DateTime _timeCreated;
+
+        public LogObject(string message, LogType type, DateTime timeCreated)
+        {
+            _message = message;
+            _type = type;
+            _timeCreated = timeCreated;
+        }
+
+        public override string ToString()
+        {
+            return $"[ {_type} ] [ {_timeCreated} ] {_message}\n";
+        }
+
+        public string ToCsv()
+        {
+            return $"{_type},{_timeCreated},{_message.Replace(',', ' ')}";
+        }
+    }
+
+    private readonly List<LogObject> _logObjects = new List<LogObject>();
     private string _logMsgs = "";
     private string _logMsgsTemp = "";
     [SerializeField] private TextMeshProUGUI logDisplay;
@@ -31,14 +60,12 @@ public class Logger : MonoBehaviour
 
     private void HandleLog(string logString, string stackTrace, LogType type)
     {
-        var newString = $"[ {type} ] [ {DateTime.Now} ] {logString} \n";
-        if (type == LogType.Exception)
-        {
-            newString = stackTrace + "\n";
-        }
-
-        _logMsgs += newString;
-        _logMsgsTemp += newString;
+        var logObject = new LogObject(type.Equals(LogType.Exception) ? stackTrace : logString, type, DateTime.Now);
+        
+        _logObjects.Add(logObject);
+        
+        _logMsgs += logObject;
+        _logMsgsTemp += logObject;
     }
 
     private void Update()
@@ -62,8 +89,8 @@ public class Logger : MonoBehaviour
 
         Debug.Log("Saving logs...");
         
-        var writer = new StreamWriter( $"{Path.Combine(_reportDirectory, _sessionName)}.txt");
-        writer.Write(_logMsgs);
+        var writer = new StreamWriter( $"{Path.Combine(_reportDirectory, _sessionName)}.csv");
+        writer.Write(string.Join('\n', _logObjects.Select(s => s.ToCsv())));
         writer.Close();
     }
 

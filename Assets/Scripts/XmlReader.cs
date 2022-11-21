@@ -27,7 +27,7 @@ namespace DefaultNamespace
                 return Directory.GetFiles($"{GameManager.Instance.RootFolder}/Data").Where(file => file.EndsWith("xml"))
                     .Select(Path.GetFileName).ToArray();
             }
-            catch (UnauthorizedAccessException e)
+            catch (UnauthorizedAccessException)
             {
                 Debug.Log("Storage permission not given, change settings and run app again.");
             }

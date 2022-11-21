@@ -5,9 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using TMPro;
+using UnityEditor;
 using UnityEngine;
-using Color = System.Drawing.Color;
 using Debug = UnityEngine.Debug;
+using Image = UnityEngine.UI.Image;
+using Math = System.Math;
 using Random = System.Random;
 
 namespace DefaultNamespace
@@ -17,7 +19,23 @@ namespace DefaultNamespace
         public static GameManager Instance { get; private set; }
         public bool currentTrialEnded = false;
         public bool experimentStarted = false;
+
+        public bool PunishOnEmpty { get; private set; } = true;
+        
+        private bool _correctionLoopActive;
+        private bool _initialRewardsActive;
+        private int _initialRewardsCount = 0;
+
+        private bool _cueActive;
+        private bool _cueGiven = false;
+        public bool NoInputRequired { get; private set; } = false;
+        public string NoInputAction { get; private set; }
+        public float NoInputWait { get; private set; }
+        
+        public int SectionCount { get; private set; }
         public Camera mainCamera;
+        public TMP_Dropdown configDropdown;
+
 
         public string RootFolder
         {
@@ -25,7 +43,7 @@ namespace DefaultNamespace
             private set => rootFolder = value;
         }
         // public float ObjectRotationSpeed => objectRotationSpeed;
-        private struct Feedback
+        public class Feedback
         {
             public int ToneFrequency { get; set; }
             public float ToneDuration { get; set; }
@@ -36,28 +54,59 @@ namespace DefaultNamespace
             public float BackgroundDuration { get; set; }
             public float ValveOpenDuration { get; set; }
         }
+        
+        public class SpawnPoint
+        {
+            public SpawnPoint(Vector3 pos, WindowController window)
+            {
+                Pos = pos;
+                Window = window;
+                Window.Type = ObjectType.Neutral;
+            }
+
+            public Vector3 Pos { get; set; }
+            public WindowController Window { get; set; }
+        }
 
         // [SerializeField] [Range(1f, 50f)] private float objectRotationSpeed = 5f;
         [SerializeField] private string rootFolder;
-        public TMP_Dropdown configDropdown;
         [SerializeField] private TextMeshProUGUI xmlContentDisplay;
         [SerializeField] public GameObject menuCanvas;
-        [SerializeField] public GameObject gameCanvas;
+        [SerializeField] private GameObject dualGameCanvas;
+        [SerializeField] private GameObject quadGameCanvas;
         [SerializeField] private GameObject feedbackCanvas;
         [SerializeField] private List<GameObject> prefabs;
-        [SerializeField] private int warmUpRounds = 2;
+        [SerializeField] private WindowController[] quadWindows;
+        [SerializeField] private WindowController[] dualWindows;
         
-        private Vector3[] _spawnPoints;
-        private Stack<Vector3> _uniqueSpawnPoints;
+        private SpawnPoint[] _spawnPoints;
+        private Stack<SpawnPoint> _uniqueSpawnPoints;
         private string _configContent;
         private Shader _shaderToReplace;
         private Random _random;
         private XElement _experimentConfig;
         private XElement _trial;
         private bool _firstTrialSucceeded;
-        private Feedback _reward;
-        private Feedback _punish;
+        private Feedback _cue;
+
+        private GameObject _gameCanvas;
+
+        public Feedback Reward { get; private set; }
+
+        public Feedback Punish { get; private set; }
+        
+        public bool DivsActive { get; private set; }
+        public Color DivColor { get; private set; }
+
         private float _orthoSize;
+        private float _orthoSizeWidth;
+
+        public float OrthoSize
+        {
+            get => _orthoSize;
+            set => _orthoSize = value;
+        }
+
 
         private Logger _logger;
         
@@ -88,22 +137,12 @@ namespace DefaultNamespace
             Debug.Log($"Data path: {RootFolder}");
 
             _logger = GetComponent<Logger>();
-
-            mainCamera = Camera.main;
-            var scHeight = Screen.height;
-            var scWidth = Screen.width;
             _shaderToReplace = Shader.Find("Standard");
             _random = new Random();
-            var camZPos = mainCamera!.transform.position.z;
-            _orthoSize = mainCamera.orthographicSize * 2;
-            _spawnPoints = new[]
-            {
-                mainCamera!.ScreenToWorldPoint(new Vector3(scWidth/4f, scHeight / 4f, -camZPos)),
-                mainCamera!.ScreenToWorldPoint(new Vector3(scWidth * 3/4f, scHeight / 4f, -camZPos)),
-                mainCamera!.ScreenToWorldPoint(new Vector3(scWidth / 4f, scHeight * 3/4f, -camZPos)),
-                mainCamera!.ScreenToWorldPoint(new Vector3(scWidth * 3/4f, scHeight * 3/4f, -camZPos)),
-            };
 
+            mainCamera = Camera.main;
+            _orthoSize = mainCamera!.orthographicSize * 2;
+            
             FillDropDownOpts();
         }
 
@@ -156,6 +195,7 @@ namespace DefaultNamespace
             foreach (var go in gameObjectsInScene)
             {
                 Destroy(go.gameObject);
+                // Destroy(go.transform.parent);
             }
         }
 
@@ -163,31 +203,95 @@ namespace DefaultNamespace
         {
             ClearGameObjects();
             ClearScene();
-            menuCanvas.SetActive(false);
-            gameCanvas.SetActive(true);
             StartCoroutine(ParseConfig(_configContent));
         }
 
-        private IEnumerator InitiateExperiment()
+        private void SetupCanvas()
         {
-            StartCoroutine(DoWarmUp());
-            yield return 0;
+            menuCanvas.SetActive(false);
+            _gameCanvas.SetActive(true);
+            
+            foreach (var divider in
+                     _gameCanvas.GetComponentsInChildren<Image>().ToList().FindAll
+                         (x => x.GetComponent<WindowController>() is null))
+            {
+                if (DivsActive)
+                {
+                    divider.color = DivColor;
+                }
+                else
+                {
+                    divider.gameObject.SetActive(false);
+                }
+            }
         }
 
-        private void PrepareScene(XElement element, XElement cfg)
+        private IEnumerator PrepareScene(XElement element, XElement cfg)
         {
+            var initialRewardsElem = FindElementByName(element, "initial-rewards");
+            var correctionLoopElem = FindElementByName(element, "correction-loop");
+            var punishOnEmptyElem  = FindElementByName(element, "punish-on-empty");
+            var noInputElem  = FindElementByName(element, "no-input");
+            var sectionsElem  = FindElementByName(element, "sections");
+            var dividersElem  = FindElementByName(element, "dividers");
+            
+            _initialRewardsActive = bool.Parse(initialRewardsElem.Attribute("active")!.Value);
+            if (_initialRewardsActive)
+            {
+                _initialRewardsCount = int.Parse(initialRewardsElem.Attribute("count")!.Value);
+            }
+            
+            _correctionLoopActive = bool.Parse(correctionLoopElem.Attribute("active")!.Value);
+            
+            PunishOnEmpty = bool.Parse(punishOnEmptyElem.Attribute("active")!.Value);
+
+            NoInputRequired = bool.Parse(noInputElem.Attribute("active")!.Value);
+            if (NoInputRequired)
+            {
+                NoInputAction = noInputElem.Attribute("action")!.Value;
+                NoInputWait = float.Parse(noInputElem.Attribute("wait-between")!.Value);
+            }
+            
+            SectionCount = int.Parse(sectionsElem.Attribute("count")!.Value);
+            
+            _gameCanvas = SectionCount == 2 ? dualGameCanvas : quadGameCanvas;
+            
+            DivsActive = bool.Parse(dividersElem.Attribute("active")!.Value);
+            if (DivsActive)
+            {
+                var colorString = dividersElem.Attribute("color")!.Value.Split(',').Select(x => float.Parse(x) / 255).ToArray();
+                DivColor = new Color(colorString[0], colorString[1], colorString[2]);
+            }
+
+            
+            
+            var camZPos = mainCamera!.transform.position.z;
+            var scHeight = Screen.height;
+            var scWidth = Screen.width;
+
+            _spawnPoints = SectionCount == 4 ? new []
+            {
+                new SpawnPoint(mainCamera!.ScreenToWorldPoint(new Vector3(scWidth / 4f, scHeight * 3/4f, -camZPos)), quadWindows[0]),
+                new SpawnPoint(mainCamera!.ScreenToWorldPoint(new Vector3(scWidth * 3/4f, scHeight * 3/4f, -camZPos)), quadWindows[1]),
+                new SpawnPoint(mainCamera!.ScreenToWorldPoint(new Vector3(scWidth / 4f, scHeight / 4f, -camZPos)), quadWindows[2]),
+                new SpawnPoint(mainCamera!.ScreenToWorldPoint(new Vector3(scWidth * 3/4f, scHeight / 4f, -camZPos)), quadWindows[3]),
+            } :
+            new []
+            {
+                new SpawnPoint(mainCamera!.ScreenToWorldPoint(new Vector3(scWidth / 4f, scHeight / 2f, -camZPos)), dualWindows[0]),
+                new SpawnPoint(mainCamera!.ScreenToWorldPoint(new Vector3(scWidth * 3/4f, scHeight / 2f, -camZPos)), dualWindows[1]) 
+            };
+
             foreach (var e in element.Elements())
             {
                 Func<XElement, XElement, IEnumerator> executor = e.Name.ToString() switch
                 {
                     "load" => HandleLoad,
-                    "call" => HandleCall,
-                    "timer" => HandleTimer,
                     _ => HandleExtras
                 };
-
-                StartCoroutine(executor(e, cfg));
+                yield return StartCoroutine(executor(e, cfg));
             }
+            
         }
 
         private IEnumerator Main(XElement element, XElement cfg)
@@ -220,7 +324,7 @@ namespace DefaultNamespace
             asset.Unload(false);
             
             prefab = prefab.transform.childCount > 0 ? ProcessObjectWithChildren(prefab) : ProcessSingleObject(prefab);
-
+            
             prefabs.Add(prefab);
             
             yield return 0;
@@ -229,7 +333,6 @@ namespace DefaultNamespace
         private GameObject ProcessSingleObject(GameObject obj)
         {
             obj.AddComponent<ObjectController>();
-            obj.AddComponent<BoxCollider>();
 
             var rend = obj.GetComponent<MeshRenderer>();
             
@@ -239,18 +342,20 @@ namespace DefaultNamespace
             {
                 material.shader = _shaderToReplace;
             }
+            
+            // obj.GetComponent<BoxCollider>().size *= 1.5f;
 
+            if (SectionCount != 2) return obj;
+            obj.AddComponent<BoxCollider>();
             return obj;
         }
 
         private GameObject ProcessObjectWithChildren(GameObject obj)
         {
             obj.AddComponent<ObjectController>();
-
-            var colliderBounds = new Bounds(Vector3.zero, Vector3.zero);
-
+            
             var rendInChildren = obj.GetComponentsInChildren<MeshRenderer>();
-
+            
             if (rendInChildren.Length <= 0) return null;
 
             foreach (var rendInChild in rendInChildren)
@@ -261,18 +366,24 @@ namespace DefaultNamespace
                 }
             }
 
+            if (SectionCount != 2) return obj;
+            
             var meshesInChildren = obj.GetComponentsInChildren<MeshFilter>();
+
+            var colliderBounds = new Bounds(Vector3.zero, Vector3.zero);
 
             foreach (var meshFilter in meshesInChildren)
             {
                 colliderBounds.Encapsulate(meshFilter.sharedMesh.bounds);
             }
 
-            var boxCollider =  obj.AddComponent<BoxCollider>();
+            var boxCollider = obj.AddComponent<BoxCollider>();
             boxCollider.size = colliderBounds.size;
             boxCollider.center = colliderBounds.center;
             return obj;
         }
+        
+        
 
         private IEnumerator HandleCall(XElement element, XElement cfg)
         {
@@ -305,52 +416,66 @@ namespace DefaultNamespace
 
         private IEnumerator HandleSprite(XElement element, XElement cfg)
         {
+            
             yield return 0;
         }
 
-        public IEnumerator IssueReward()
+        public IEnumerator IssueReward(Feedback feedback)
         {
-            ClearGameObjects();
+            if (!NoInputRequired)
+            {
+                ClearGameObjects();
+            }
 
             // TODO: Create sound with required frequency
-            Debug.Log(_reward.Note);
-            SerialComs.Instance.SendMessageToArduino($"reward{_reward.ValveOpenDuration}");
-            // SerialComs.Instance.SendMessageToArduino("reward500");
-            _reward.ToneAudio.Play();
+            Debug.Log(feedback.Note);
+
+            if (Application.platform.Equals(RuntimePlatform.Android))
+            {
+                SerialComs.Instance.SendMessageToArduino($"reward{feedback.ValveOpenDuration}");
+            } 
             
-            yield return new WaitForSeconds(_reward.ToneDuration);
+            feedback.ToneAudio.Play();
             
-            _reward.ToneAudio.Stop();
+            yield return new WaitForSeconds(feedback.ToneDuration);
+            
+            feedback.ToneAudio.Stop();
             
             // TODO: Connect with hardware to send drops of rewards
             
+            yield return new WaitForSeconds(feedback.WaitDuration);
             
-            yield return new WaitForSeconds(_reward.WaitDuration);
+            if (NoInputRequired)
+            {
+                ClearGameObjects();
+            }
+            
             currentTrialEnded = true;
             if (!_firstTrialSucceeded) _firstTrialSucceeded = true;
         }
 
-        public IEnumerator IssuePunish()
+        public IEnumerator IssuePunish(Feedback feedback)
         {
-            ClearGameObjects();
-            
             // TODO: Create sound with required frequency
-            Debug.Log(_punish.Note);
-            _punish.ToneAudio.Play();
+            Debug.Log(feedback.Note);
+            feedback.ToneAudio.Play();
             feedbackCanvas.SetActive(true);
             
-            yield return new WaitForSeconds(_punish.ToneDuration);
+            yield return new WaitForSeconds(feedback.ToneDuration);
 
-            _punish.ToneAudio.Stop();
+            feedback.ToneAudio.Stop();
             feedbackCanvas.SetActive(false);
             
-
-            yield return new WaitForSeconds(_punish.WaitDuration);
+            yield return new WaitForSeconds(feedback.WaitDuration);
+ 
+            ClearGameObjects();
             currentTrialEnded = true;
         }
 
         private void SetupReward(XElement element, XElement cfg)
         {
+            Reward = new Feedback();
+            
             var position = 0;
             var samplerate = 44100;
             
@@ -359,11 +484,12 @@ namespace DefaultNamespace
             var timer = FindElementByName(element, "timer");
             var valve = FindElementByName(element, "valve");
             
-            _reward.ToneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
-            _reward.ToneDuration = float.Parse(tone.Attribute("duration")!.Value);
-            _reward.Note = note.Attribute("text")!.Value;
-            _reward.WaitDuration = float.Parse(timer.Attribute("duration")!.Value);
-            _reward.ValveOpenDuration = float.Parse(valve.Attribute("duration")!.Value);
+            
+            Reward.ToneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
+            Reward.ToneDuration = float.Parse(tone.Attribute("duration")!.Value);
+            Reward.Note = note.Attribute("text")!.Value;
+            Reward.WaitDuration = float.Parse(timer.Attribute("duration")!.Value);
+            Reward.ValveOpenDuration = float.Parse(valve.Attribute("duration")!.Value);
             
             var clip = AudioClip.Create("RewardTone", samplerate * 20, 1, samplerate,
                 true, 
@@ -372,18 +498,56 @@ namespace DefaultNamespace
                     var count = 0;
                     while (count < data.Length)
                     {
-                        data[count] = Mathf.Sin(2 * Mathf.PI * _reward.ToneFrequency * position / samplerate);
+                        data[count] = Mathf.Sin(2 * Mathf.PI * Reward.ToneFrequency * position / samplerate);
                         position++;
                         count++;
                     }
                 }, newPosition => position = newPosition);
 
-            _reward.ToneAudio = gameObject.AddComponent<AudioSource>();
-            _reward.ToneAudio.clip = clip;
+            Reward.ToneAudio = gameObject.AddComponent<AudioSource>();
+            Reward.ToneAudio.clip = clip;
+        }
+        
+        private void SetupCue(XElement element, XElement cfg)
+        {
+            _cueActive = true;
+            _cue = new Feedback();
+            
+            var position = 0;
+            var samplerate = 44100;
+            
+            var tone = FindElementByName(element, "tone");
+            var note = FindElementByName(element, "note");
+            var timer = FindElementByName(element, "timer");
+            var valve = FindElementByName(element, "valve");
+            
+            _cue.ToneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
+            _cue.ToneDuration = float.Parse(tone.Attribute("duration")!.Value);
+            _cue.Note = note.Attribute("text")!.Value;
+            _cue.WaitDuration = float.Parse(timer.Attribute("duration")!.Value);
+            _cue.ValveOpenDuration = float.Parse(valve.Attribute("duration")!.Value);
+            
+            var clip = AudioClip.Create("RewardTone", samplerate * 20, 1, samplerate,
+                true, 
+                data =>
+                {
+                    var count = 0;
+                    while (count < data.Length)
+                    {
+                        data[count] = Mathf.Sin(2 * Mathf.PI * Reward.ToneFrequency * position / samplerate);
+                        position++;
+                        count++;
+                    }
+                }, newPosition => position = newPosition);
+
+            _cue.ToneAudio = gameObject.AddComponent<AudioSource>();
+            _cue.ToneAudio.clip = clip;
         }
 
         private void SetupPunish(XElement element, XElement cfg)
         {
+            Punish = new Feedback();
+            
             var position = 0;
             var samplerate = 44100;
             
@@ -392,12 +556,14 @@ namespace DefaultNamespace
             var timer = FindElementByName(element, "timer");
             var sprite = FindElementByName(element, "sprite");
             
-            _punish.ToneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
-            _punish.ToneDuration = float.Parse(tone.Attribute("duration")!.Value);
-            _punish.Note = note.Attribute("text")!.Value;
-            _punish.WaitDuration = float.Parse(timer.Attribute("duration")!.Value);
-            _punish.BackgroundColor = Color.FromName(sprite.Attribute("id")!.Value);
-            _punish.BackgroundDuration = float.Parse(sprite.Attribute("duration")!.Value);
+            Punish.ToneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
+            Punish.ToneDuration = float.Parse(tone.Attribute("duration")!.Value);
+            Punish.Note = note.Attribute("text")!.Value;
+            Punish.WaitDuration = float.Parse(timer.Attribute("duration")!.Value);
+            var spriteColor = sprite.Attribute("color")!.Value.Split(',').Select(x => float.Parse(x) / 255).ToArray();
+            Punish.BackgroundColor = new Color(spriteColor[0], spriteColor[1], spriteColor[2]);
+            feedbackCanvas.GetComponentInChildren<Image>().color = Punish.BackgroundColor;
+            Punish.BackgroundDuration = float.Parse(sprite.Attribute("duration")!.Value);
 
             var clip = AudioClip.Create("PunishTone", samplerate * 20, 1, samplerate,
                 true, 
@@ -406,20 +572,26 @@ namespace DefaultNamespace
                 var count = 0;
                 while (count < data.Length)
                 {
-                    data[count] = Mathf.Sin(2 * Mathf.PI * _punish.ToneFrequency * position / samplerate);
+                    data[count] = Mathf.Sin(2 * Mathf.PI * Punish.ToneFrequency * position / samplerate);
                     position++;
                     count++;
                 }
             }, newPosition => position = newPosition);
 
-            _punish.ToneAudio = gameObject.AddComponent<AudioSource>();
-            _punish.ToneAudio.clip = clip;
+            Punish.ToneAudio = gameObject.AddComponent<AudioSource>();
+            Punish.ToneAudio.clip = clip;
         }
 
         private IEnumerator PerformTrial()
         {
             
-            _uniqueSpawnPoints = new Stack<Vector3>(_spawnPoints.OrderBy(_ => _random.Next()));
+            _uniqueSpawnPoints = new Stack<SpawnPoint>(_spawnPoints.OrderBy(_ => _random.Next()));
+
+            if (_cueActive && !_cueGiven)
+            {
+                yield return StartCoroutine(IssueReward(_cue));
+                _cueGiven = true;
+            }
             
             foreach (var e in _trial.Elements())
             {
@@ -429,6 +601,7 @@ namespace DefaultNamespace
                     _ => HandleExtras
                 };
 
+                Debug.Log("Commencing Trial");
                 yield return StartCoroutine(executor(e, _experimentConfig));
             }
         }
@@ -441,18 +614,62 @@ namespace DefaultNamespace
         private IEnumerator HandleObject(XElement element, XElement cfg)
         {
             var eId = element.Attribute("id")?.Value;
-            var objectName = element.Attribute("bundle")?.Value.Split('/').ToList().Last();
-            var spawnPoint =  _uniqueSpawnPoints.Pop();
-            var obj = prefabs.Find(x => x.name == objectName);
-            var go = Instantiate(obj, spawnPoint, Quaternion.Euler(0, 90, 0));
-            go.transform.localScale = new Vector3(_orthoSize / 4f, _orthoSize / 4f, _orthoSize / 4f);
             
-            go.GetComponent<ObjectController>().Type = eId switch
+            var objectName = element.Attribute("bundle")?.Value.Split('/').ToList().Last();
+            
+            var rotation = element.Attribute("rotation")!.Value.Split(',').Select(float.Parse).ToArray();
+            var rotationVec = Quaternion.Euler(rotation[0], rotation[1], rotation[2]);
+            
+            var offset = element.Attribute("offset")!.Value.Split(',').Select(float.Parse).ToArray();
+            var offsetVec = new Vector3(offset[0], offset[1], offset[2]);
+
+            var scaleOverride = element.Attribute("scale") != null ? float.Parse(element.Attribute("scale")!.Value) : 1;
+
+            var spawnPoint =  _uniqueSpawnPoints.Pop();
+
+            var obj = prefabs.Find(x => string.Equals(x.name, objectName, StringComparison.CurrentCultureIgnoreCase));
+            var go = Instantiate(obj, Vector3.zero, Quaternion.identity);
+            
+            Bounds bounds;
+            if (go.transform.childCount > 0)
             {
-                "rewarded" => ObjectController.ObjectType.Reward,
-                "punished" => ObjectController.ObjectType.Punish,
-                _ => ObjectController.ObjectType.Neutral
+                bounds = new Bounds(Vector3.zero, Vector3.zero);
+                
+                foreach (var rendInChild in go.GetComponentsInChildren<Renderer>())
+                {
+                    bounds.Encapsulate(rendInChild.bounds);
+                }
+            }
+            else
+            {
+                bounds = go.GetComponent<Renderer>().bounds;
+            }
+            
+            var minBound = mainCamera.WorldToScreenPoint(bounds.min);
+            var maxBound = mainCamera.WorldToScreenPoint(bounds.max);
+            var midBound = mainCamera.WorldToScreenPoint(bounds.center);
+            
+            var division = GameManager.Instance.SectionCount == 2 ? 2f : 3f;
+
+            var scaleX = Screen.width / division / (Math.Abs(maxBound.x - minBound.x));
+            var scaleY = Screen.height / division / (Math.Abs(maxBound.y - minBound.y));
+            var scale = Math.Min(scaleX, scaleY);
+
+            go.transform.localScale = new Vector3(scaleOverride * scale, scaleOverride * scale, scaleOverride * scale);
+            go.transform.Translate(spawnPoint.Pos + offsetVec);
+            go.transform.rotation = rotationVec;
+
+
+            var type = eId switch
+            {
+                "rewarded" => ObjectType.Reward,
+                "punished" => ObjectType.Punish,
+                _ => ObjectType.Neutral
             };
+
+            spawnPoint.Window.Type = type;
+            go.GetComponent<ObjectController>().Type = type;
+            
             
             yield return 0;
         }
@@ -499,9 +716,23 @@ namespace DefaultNamespace
 
                 if (collectionType == "loop")
                 {
-                    currentTrialEnded = false;
-                    StartCoroutine(executor(e, cfg));
-                    yield return new WaitUntil((() => currentTrialEnded));
+                    if (NoInputRequired)
+                    {
+                        yield return StartCoroutine(executor(e, cfg));
+                        yield return StartCoroutine(NoInputAction switch
+                        {
+                            "rewarded" => IssueReward(Reward),
+                            "punished" => IssuePunish(Punish),
+                            _ => throw new ArgumentOutOfRangeException()
+                        });
+                        yield return new WaitForSeconds(NoInputWait);
+                    }
+                    else
+                    {
+                        currentTrialEnded = false;
+                        StartCoroutine(executor(e, cfg));
+                        yield return new WaitUntil((() => currentTrialEnded));
+                    }
                 }
                 else
                 {
@@ -528,17 +759,20 @@ namespace DefaultNamespace
         }
         
 
-        private IEnumerator DoWarmUp()
+        private IEnumerator DoInitialRewards()
         {
-            for (var i = 0; i < warmUpRounds; i++)
+            if (_initialRewardsActive)
             {
-                Debug.Log($"Commencing habituation reward #{i+1} from {warmUpRounds}");
-                yield return StartCoroutine(IssueReward());
+                for (var i = 0; i < _initialRewardsCount; i++)
+                {
+                    Debug.Log($"Commencing habituation reward #{i+1} from {_initialRewardsCount}");
+                    yield return StartCoroutine(IssueReward(Reward));
+                }
+
+                Debug.Log("Habituation rewards finished"); 
             }
 
-            Debug.Log("Habituation rewards finished");
-
-            yield return StartCoroutine(DoCorrectionLoop());
+            if (_correctionLoopActive) yield return StartCoroutine(DoCorrectionLoop());
         }
 
         private IEnumerator ParseConfig(string xmlContent)
@@ -548,15 +782,31 @@ namespace DefaultNamespace
             var rewardCfg = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
                      e.Attribute("id")!.Value == "rewarded").ToArray();
-
-            SetupReward(rewardCfg[0], _experimentConfig);
+            
+            if (rewardCfg.Length > 0)
+            {
+                SetupReward(rewardCfg[0], _experimentConfig);
+            }
             
             var punishCfg = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
                      e.Attribute("id")!.Value == "punished").ToArray();
 
-            SetupPunish(punishCfg[0], _experimentConfig);
+            if (punishCfg.Length > 0)
+            {
+                SetupPunish(punishCfg[0], _experimentConfig);
+            }
             
+            var cueCfg = _experimentConfig.Elements().Where(
+                e => e.Name.ToString().Equals("function") &&
+                     e.Attribute("id")!.Value == "cued").ToArray();
+            
+            if (cueCfg.Length > 0)
+            {
+                _cueActive = true;
+                SetupCue(cueCfg[0], _experimentConfig);
+            }
+
             var trialCfg = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
                      e.Attribute("id")!.Value == "trial").ToArray();
@@ -567,16 +817,19 @@ namespace DefaultNamespace
                 e => e.Name.ToString().Equals("function") &&
                      e.Attribute("id")!.Value == "prepare").ToArray();
             
-            PrepareScene(prepFunc[0], _experimentConfig);
-            
-            yield return StartCoroutine(DoWarmUp());
+            yield return StartCoroutine(PrepareScene(prepFunc[0], _experimentConfig));
 
             
+            SetupCanvas();
+
+            yield return StartCoroutine(DoInitialRewards());
+
             var mainFunc = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
                      e.Attribute("id")!.Value == "main").ToArray();
             
             yield return StartCoroutine(Main(mainFunc[0], _experimentConfig));
+            
         }
 
         public void Exit()

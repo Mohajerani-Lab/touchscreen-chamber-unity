@@ -2,31 +2,23 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using DefaultNamespace;
-using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
-public class TrialManager : MonoBehaviour
+public class WindowController : MonoBehaviour, IPointerClickHandler
 {
-    private void Update()
+    public ObjectType Type;
+
+
+    public void OnPointerClick(PointerEventData eventData)
     {
         if (GameManager.Instance.menuCanvas.activeSelf) return;
         if (GameManager.Instance.NoInputRequired) return;
-        if (GameManager.Instance.SectionCount == 4) return;
-        CheckClick();
-    }
-
-    private void CheckClick()
-    {
-        if (!Input.GetMouseButtonDown(0)) return;
-        if (!Physics.Raycast(GameManager.Instance.mainCamera.ScreenPointToRay(Input.mousePosition), out var raycastHitInfo)) return;
-
-        var goType = raycastHitInfo.collider.gameObject.GetComponent<ObjectController>().Type;
-
-        GameManager.Instance.experimentStarted = true;
-
-        switch (goType)
+        
+        switch (Type)
         {
             case ObjectType.Reward:
+                if (GameManager.Instance.SectionCount == 2) break;
                 GameManager.Instance.experimentStarted = true;
                 StartCoroutine(GameManager.Instance.IssueReward(GameManager.Instance.Reward));
                 break;

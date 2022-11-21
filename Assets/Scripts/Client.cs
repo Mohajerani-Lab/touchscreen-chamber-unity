@@ -64,7 +64,7 @@ public class Client : MonoBehaviour
         Socket.On("rotate", _ =>
         {
             Debug.Log("Rotate command received");
-            controller.RotateEnabled = !controller.RotateEnabled;
+            // controller.RotateEnabled = !controller.RotateEnabled;
         });
     }
 
