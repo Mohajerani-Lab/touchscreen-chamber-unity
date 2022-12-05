@@ -14,6 +14,8 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
     {
         if (GameManager.Instance.menuCanvas.activeSelf) return;
         if (GameManager.Instance.NoInputRequired) return;
+        if (GameManager.Instance.InputReceived) return;
+
         
         switch (Type)
         {
@@ -23,6 +25,7 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
                 StartCoroutine(GameManager.Instance.IssueReward(GameManager.Instance.Reward));
                 break;
             case ObjectType.Punish:
+                if (GameManager.Instance.SectionCount == 2) break;
                 GameManager.Instance.experimentStarted = true;
                 StartCoroutine(GameManager.Instance.IssuePunish(GameManager.Instance.Punish));
                 break;

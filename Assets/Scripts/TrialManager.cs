@@ -20,7 +20,7 @@ public class TrialManager : MonoBehaviour
         if (!Input.GetMouseButtonDown(0)) return;
         if (!Physics.Raycast(GameManager.Instance.mainCamera.ScreenPointToRay(Input.mousePosition), out var raycastHitInfo)) return;
 
-        var goType = raycastHitInfo.collider.gameObject.GetComponent<ObjectController>().Type;
+        var goType = raycastHitInfo.collider.gameObject.GetComponentInParent<ObjectController>().Type;
 
         GameManager.Instance.experimentStarted = true;
 

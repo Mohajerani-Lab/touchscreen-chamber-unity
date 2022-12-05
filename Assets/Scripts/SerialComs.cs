@@ -14,6 +14,7 @@ public class SerialComs : MonoBehaviour
     [SerializeField] private TMP_Dropdown serialPortDropdown;
     private AndroidJavaObject serialcomms = null;
     private AndroidJavaObject activityContext = null;
+    public bool ArduinoConnected { get; private set; } = false;
 
 
     private void Start()
@@ -49,7 +50,9 @@ public class SerialComs : MonoBehaviour
     {
         activityContext.Call("runOnUiThread", new AndroidJavaRunnable((() =>
         {
-            serialcomms.Call("setupArduino");
+            var res = serialcomms.Call<int>("setupArduino");
+            if (res != 0) return;
+            ArduinoConnected = true;
         })));
     }
 
