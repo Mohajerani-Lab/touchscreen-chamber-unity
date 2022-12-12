@@ -1,17 +1,10 @@
-﻿using System;
-using UnityEngine;
-using System.Collections;
-using System.IO.Ports;
-using System.Linq;
-using System.Security.Cryptography;
-using TMPro;
+﻿using UnityEngine;
 
 public class SerialComs : MonoBehaviour
 {
     public static SerialComs Instance;
-    private SerialPort _arduino;
+    // private SerialPort _arduino;
     private string _buffer;
-    [SerializeField] private TMP_Dropdown serialPortDropdown;
     private AndroidJavaObject serialcomms = null;
     private AndroidJavaObject activityContext = null;
     public bool ArduinoConnected { get; private set; } = false;

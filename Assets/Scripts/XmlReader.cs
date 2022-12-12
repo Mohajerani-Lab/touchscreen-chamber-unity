@@ -20,11 +20,12 @@ namespace DefaultNamespace
             return File.ReadAllText(path);
         }
 
-        public static IEnumerable<string> ListConfigFiles()
+        public static string[] ListConfigFiles()
         {
             try
             {
-                return Directory.GetFiles($"{GameManager.Instance.RootFolder}/Data").Where(file => file.EndsWith("xml"))
+                return Directory.GetFiles(Path.Combine(GameManager.Instance.RootFolder, "Data"))
+                    .Where(file => file.EndsWith("xml"))
                     .Select(Path.GetFileName).ToArray();
             }
             catch (UnauthorizedAccessException)

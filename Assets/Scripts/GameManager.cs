@@ -71,7 +71,6 @@ namespace DefaultNamespace
             public WindowController Window { get; set; }
         }
 
-        // [SerializeField] [Range(1f, 50f)] private float objectRotationSpeed = 5f;
         [SerializeField] private string rootFolder;
         [SerializeField] private TextMeshProUGUI xmlContentDisplay;
         [SerializeField] public GameObject menuCanvas;
@@ -85,14 +84,18 @@ namespace DefaultNamespace
         
         private SpawnPoint[] _spawnPoints;
         private Stack<SpawnPoint> _uniqueSpawnPoints;
-        private string _configContent;
+        private Stack<SpawnPoint> _lastUniqueSpawnPoints;
         private Random _random;
         private XElement _experimentConfig;
         private XElement _trial;
-        private bool _firstTrialSucceeded;
         private Feedback _cue;
         private AudioSource _audioSource;
-
+        private string _configContent;
+        
+        private bool _firstTrialSucceeded;
+        public bool TrialSucceeded { get; set; }
+        public bool RepeatTrial { get; set; } = false;
+        
         private GameObject _gameCanvas;
 
         public Feedback Reward { get; private set; }
@@ -100,6 +103,7 @@ namespace DefaultNamespace
         public Feedback Punish { get; private set; }
         
         public bool DivsActive { get; private set; }
+        
         public Color DivColor { get; private set; }
 
         private float _orthoSize;
@@ -155,10 +159,11 @@ namespace DefaultNamespace
 
         private void FillDropDownOpts()
         {
+            string[] files;
             try
             {
-                
-                if (!XmlReader.ListConfigFiles().Any())
+                files = XmlReader.ListConfigFiles();
+                if (!files.Any())
                 {
                     Debug.Log($"No config files found in data path");
                     return;
@@ -170,7 +175,7 @@ namespace DefaultNamespace
                 return;
             }
 
-            foreach (var conf in XmlReader.ListConfigFiles())
+            foreach (var conf in files)
             {
                 configDropdown.options.Add(new TMP_Dropdown.OptionData(conf));
             }
@@ -466,7 +471,7 @@ namespace DefaultNamespace
         public IEnumerator IssueReward(Feedback feedback)
         {
             InputReceived = true;
-
+            TrialSucceeded = true;
             _audioSource.PlayOneShot(feedback.AudioClip);
             
             if (Application.platform.Equals(RuntimePlatform.Android))
@@ -637,8 +642,16 @@ namespace DefaultNamespace
 
         private IEnumerator PerformTrial()
         {
-            ResetSpawnPoints();
-            _uniqueSpawnPoints = new Stack<SpawnPoint>(_spawnPoints.OrderBy(_ => _random.Next()));
+            if (!RepeatTrial)
+            {
+                ResetSpawnPoints();
+                _uniqueSpawnPoints = new Stack<SpawnPoint>(_spawnPoints.OrderBy(_ => _random.Next()));
+                _lastUniqueSpawnPoints = new Stack<SpawnPoint>(_uniqueSpawnPoints);
+            }
+            else
+            {
+                _uniqueSpawnPoints = new Stack<SpawnPoint>(_lastUniqueSpawnPoints);
+            }
 
             if (_cueActive && !_cueGiven)
             {
@@ -755,23 +768,22 @@ namespace DefaultNamespace
                     break;
             }
 
-
-            foreach (var e in elems)
+            for (var i = 0; i < elems.Count; i++)
             {
-                Func<XElement, XElement, IEnumerator> executor = e.Name.ToString() switch
+                Func<XElement, XElement, IEnumerator> executor = elems[i].Name.ToString() switch
                 {
                     "call" => HandleCall,
                     "object" => HandleObject,
                     "group" => HandleGroup,
                     _ => HandleExtras
                 };
-
+                
                 if (collectionType == "loop")
                 {
-                    Debug.Log("Commencing Trial");
+                    Debug.Log($"Commencing Trial #{i + 1} from {elems.Count}");
                     if (NoInputRequired)
                     {
-                        yield return StartCoroutine(executor(e, cfg));
+                        yield return StartCoroutine(executor(elems[i], cfg));
                         yield return StartCoroutine(NoInputAction switch
                         {
                             "rewarded" => IssueReward(Reward),
@@ -784,24 +796,32 @@ namespace DefaultNamespace
                     {
                         currentTrialEnded = false;
                         InputReceived = false;
-                        StartCoroutine(executor(e, cfg));
+                        TrialSucceeded = false;
+                        StartCoroutine(executor(elems[i], cfg));
                         yield return new WaitUntil((() => currentTrialEnded));
+                        if (_correctionLoopActive && !TrialSucceeded)
+                        {
+                            yield return StartCoroutine(DoCorrectionLoop());
+                        }
                     }
                 }
                 else
                 {
-                    StartCoroutine(executor(e, cfg));
+                    StartCoroutine(executor(elems[i], cfg));
                 }
             }
-
+            
             yield return 0;
         }
 
         private IEnumerator DoCorrectionLoop()
         {
-            _firstTrialSucceeded = false;
+            // _firstTrialSucceeded = false;
+            Debug.Log("Entered Correction loop");
+
+            RepeatTrial = true;
             var count = 0;
-            while (!_firstTrialSucceeded)
+            while (!TrialSucceeded)
             {
                 currentTrialEnded = false;
                 InputReceived = false;
@@ -810,24 +830,24 @@ namespace DefaultNamespace
                 yield return new WaitUntil(() => currentTrialEnded);
             }
 
+            RepeatTrial = false;
             Debug.Log("Correction loop finished");
         }
         
 
         private IEnumerator DoInitialRewards()
         {
-            if (_initialRewardsActive)
+            if (!_initialRewardsActive) yield break;
+            
+            for (var i = 0; i < _initialRewardsCount; i++)
             {
-                for (var i = 0; i < _initialRewardsCount; i++)
-                {
-                    Debug.Log($"Commencing habituation reward #{i+1} from {_initialRewardsCount}");
-                    yield return StartCoroutine(IssueReward(Reward));
-                }
-
-                Debug.Log("Habituation rewards finished"); 
+                Debug.Log($"Commencing habituation reward #{i+1} from {_initialRewardsCount}");
+                yield return StartCoroutine(IssueReward(Reward));
             }
 
-            if (_correctionLoopActive) yield return StartCoroutine(DoCorrectionLoop());
+            Debug.Log("Habituation rewards finished");
+
+            // if (_correctionLoopActive) yield return StartCoroutine(DoCorrectionLoop());
         }
 
         private IEnumerator ParseConfig(string xmlContent)
