@@ -71,6 +71,7 @@ public class Logger : MonoBehaviour
     public void ClearLogDisplay()
     {
         _logMsgsTemp = "";
+        logDisplay.text = _logMsgsTemp;
     }
 
     public void SaveLogsToDisk()
