@@ -1,46 +1,88 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using DefaultNamespace;
-using Unity.VisualScripting;
+﻿using System;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 
-public class TrialManager : MonoBehaviour
+namespace DefaultNamespace
 {
-    private void Update()
+    public class TrialManager : MonoBehaviour
     {
-        if (GameManager.Instance.menuCanvas.activeSelf) return;
-        if (GameManager.Instance.NoInputRequired) return;
-        if (GameManager.Instance.SectionCount == 4) return;
-        CheckClick();
-    }
-
-    private void CheckClick()
-    {
-        if (!Input.GetMouseButtonDown(0)) return;
-        if (!Physics.Raycast(GameManager.Instance.mainCamera.ScreenPointToRay(Input.mousePosition), out var raycastHitInfo)) return;
-
-        var goType = raycastHitInfo.collider.gameObject.GetComponentInParent<ObjectController>().Type;
-
-        GameManager.Instance.experimentStarted = true;
-
-        switch (goType)
+        public static TrialManager Instance { get; private set; }
+        public bool CurTrialFinished { get; set; }
+        
+        private NewGameManager GM;
+        private bool _curTrialStarted;
+        private int _curTrialNumber;
+        private int _curCorrectionLoopNumber;
+        private void Awake()
         {
-            case ObjectType.Reward:
-                GameManager.Instance.experimentStarted = true;
-                StartCoroutine(GameManager.Instance.IssueReward(GameManager.Instance.Reward));
-                break;
-            case ObjectType.Punish:
-                GameManager.Instance.experimentStarted = true;
-                StartCoroutine(GameManager.Instance.IssuePunish(GameManager.Instance.Punish));
-                break;
-            case ObjectType.Neutral:
-                if (!GameManager.Instance.PunishOnEmpty) break;
-                GameManager.Instance.experimentStarted = true;
-                StartCoroutine(GameManager.Instance.IssuePunish(GameManager.Instance.Punish));
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+            }
+            else
+            {
+                Instance = this;
+            }
+        }
+
+        private void Start()
+        {
+            GM = NewGameManager.Instance;
+            InitialSetup();
+        }
+
+        public void InitialSetup()
+        {
+            _curTrialStarted = false;
+            CurTrialFinished = false;
+            _curTrialNumber = 0;
+            _curCorrectionLoopNumber = 0;
+        }
+
+        private void Update()
+        {
+            if (GM.ExperimentPhase != ExperimentPhase.Trial) return;
+            
+            if (_curTrialNumber >= GM.TrialEvents.Count) return;
+            
+            if (!_curTrialStarted)
+            {
+                GM.InputReceived = false;
+                _curTrialStarted = true;
+
+                Debug.Log(GM.RepeatTrial
+                    ? $"Commencing Correction Loop #{++_curCorrectionLoopNumber}"
+                    : $"Commencing trial #{_curTrialNumber + 1} from {GM.TrialEvents.Count}");
+
+                GM.GenerateNewPositions();
+
+                foreach (var element in GM.TrialData.Elements())
+                {
+                    if (!element.Name.ToString().Equals("collection")) continue;
+                    
+                    var collection = GM.HandleCollection(element);
+                    
+                    foreach (var cElement in collection.Where(x => x.Name.ToString().Equals("object")))
+                    {
+                        GM.HandleObject(cElement);
+                    }
+                }
+
+                if (GM.NoInputRequired)
+                {
+                    GM.ExperimentPhase = ExperimentPhase.Reward;
+                }
+            }
+
+            if (!CurTrialFinished) return;
+            
+            _curTrialStarted = false;
+            CurTrialFinished = false;
+
+            if (GM.RepeatTrial) return;
+            _curTrialNumber++;
+            _curCorrectionLoopNumber = 0;
         }
     }
 }

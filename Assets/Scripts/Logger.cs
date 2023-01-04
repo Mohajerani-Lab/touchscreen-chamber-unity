@@ -8,8 +8,6 @@ using UnityEngine;
 
 public class Logger : MonoBehaviour
 {
-    
-    
     private class LogObject
     {
         private readonly string _message;
@@ -34,6 +32,7 @@ public class Logger : MonoBehaviour
         }
     }
 
+    private NewGameManager GM;
     private readonly List<LogObject> _logObjects = new List<LogObject>();
     private string _logMsgs = "";
     private string _logMsgsTemp = "";
@@ -43,6 +42,7 @@ public class Logger : MonoBehaviour
 
     private void Start()
     {
+        GM = NewGameManager.Instance;
         // logDisplay = gameObject.GetComponentInChildren<TextMeshProUGUI>();
         _sessionName = "Touchscreen-Trial-Game-" + DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
         Debug.Log($"Logger initialized. Session Name: {_sessionName}");
@@ -80,7 +80,7 @@ public class Logger : MonoBehaviour
 
     public void SaveLogsToDisk()
     {
-        _reportDirectory = Path.Combine(GameManager.Instance.RootFolder, "Reports");
+        _reportDirectory = Path.Combine(GM.RootFolder, "Reports");
         if (!Directory.Exists(_reportDirectory))
         {
             Debug.Log("Creating reports folder...");

@@ -6,20 +6,31 @@ namespace DefaultNamespace
 {
     public class MenuControls : MonoBehaviour
     {
+        private NewGameManager GM;
+        private TrialManager T;
         private Vector2 _fingerDown;
         private Vector2 _fingerUp;
         private float swipeThreshold = (float) Screen.height / 5;
         
-        private int _keyCount = 0;
         private DateTime _beginTime = DateTime.Now;
 
         private bool _isThreeFingerSwipe = false;
 
+        private void Start()
+        {
+            GM = NewGameManager.Instance;
+            T = TrialManager.Instance;
+        }
+
         private void Update()
         {
-            
+
             if (Input.GetKeyDown(KeyCode.Escape))
-                GameManager.Instance.menuCanvas.SetActive(!GameManager.Instance.menuCanvas.activeSelf);
+            {
+                GM.menuCanvas.SetActive(!GM.menuCanvas.activeSelf);
+                // T.CurTrialFinished = true;
+                return;
+            }
             
             if (Input.touchCount == 0) return;
             
@@ -52,7 +63,7 @@ namespace DefaultNamespace
             //         if ((DateTime.Now - _beginTime).Milliseconds < 1000)
             //         {
             //             Debug.Log(DateTime.Now.Millisecond);
-            //             GameManager.Instance.menuCanvas.SetActive(!GameManager.Instance.menuCanvas.activeSelf);
+            //             GM.menuCanvas.SetActive(!GM.menuCanvas.activeSelf);
             //         }
             //         _keyCount = 0;
             //         break;
@@ -72,7 +83,7 @@ namespace DefaultNamespace
             
             if (_fingerDown.y - _fingerUp.y > swipeThreshold)
             {
-                GameManager.Instance.menuCanvas.SetActive(!GameManager.Instance.menuCanvas.activeSelf);
+                GM.menuCanvas.SetActive(!GM.menuCanvas.activeSelf);
                 _fingerUp = _fingerDown;
             }
 

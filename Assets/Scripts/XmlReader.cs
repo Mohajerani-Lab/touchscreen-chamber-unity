@@ -15,6 +15,7 @@ namespace DefaultNamespace
 {
     public class XmlReader : MonoBehaviour
     {
+
         public static string LoadXmlString(string path)
         {
             return File.ReadAllText(path);
@@ -24,7 +25,7 @@ namespace DefaultNamespace
         {
             try
             {
-                return Directory.GetFiles(Path.Combine(GameManager.Instance.RootFolder, "Data"))
+                return Directory.GetFiles(Path.Combine(NewGameManager.Instance.RootFolder, "Data"))
                     .Where(file => file.EndsWith("xml"))
                     .Select(Path.GetFileName).ToArray();
             }

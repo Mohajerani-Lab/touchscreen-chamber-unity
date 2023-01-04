@@ -2,12 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using DefaultNamespace;
+using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
-public class WindowController : MonoBehaviour, IPointerClickHandler
+public class InputManager : MonoBehaviour
 {
-    public ObjectType Type;
     private NewGameManager GM;
 
     private void Start()
@@ -15,28 +14,34 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
         GM = NewGameManager.Instance;
     }
 
-
-    public void OnPointerClick(PointerEventData eventData)
+    private void Update()
     {
         if (GM.menuCanvas.activeSelf) return;
         if (GM.NoInputRequired) return;
-        if (GM.InputReceived) return;
+        if (GM.SectionCount == 4) return;
+        if (!GM.ExperimentPhase.Equals(ExperimentPhase.Trial)) return;
+        CheckClick();
+    }
 
-        
-        switch (Type)
+    private void CheckClick()
+    {
+        if (!Input.GetMouseButtonDown(0)) return;
+        if (!Physics.Raycast(GM.MainCamera.ScreenPointToRay(Input.mousePosition), out var raycastHitInfo)) return;
+
+        var goType = raycastHitInfo.collider.gameObject.GetComponentInParent<ObjectController>().Type;
+
+        GM.experimentStarted = true;
+
+        switch (goType)
         {
             case ObjectType.Reward:
-                if (GM.SectionCount == 2) break;
-                GM.experimentStarted = true;
+                GM.ExperimentPhase = ExperimentPhase.Reward;
                 break;
             case ObjectType.Punish:
-                if (GM.SectionCount == 2) break;
-                GM.experimentStarted = true;
                 GM.ExperimentPhase = ExperimentPhase.Punish;
                 break;
             case ObjectType.Neutral:
                 if (!GM.PunishOnEmpty) break;
-                GM.experimentStarted = true;
                 GM.ExperimentPhase = ExperimentPhase.Punish;
                 break;
             default:

@@ -10,7 +10,7 @@ public class ObjectController : MonoBehaviour
     // private Vector3 _rotationDir;
     
     // public bool RotateEnabled { get; set; } = true;
-    public ObjectType Type { get; set; } = ObjectType.Neutral;
+    public ObjectType Type = ObjectType.Neutral;
 
     // private MeshRenderer renderer;
     // private Vector3 pos;
