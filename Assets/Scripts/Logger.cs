@@ -43,7 +43,6 @@ public class Logger : MonoBehaviour
     private void Start()
     {
         GM = NewGameManager.Instance;
-        // logDisplay = gameObject.GetComponentInChildren<TextMeshProUGUI>();
         _sessionName = "Touchscreen-Trial-Game-" + DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
         Debug.Log($"Logger initialized. Session Name: {_sessionName}");
     }
@@ -64,12 +63,8 @@ public class Logger : MonoBehaviour
         
         _logObjects.Add(logObject);
         
-        _logMsgs += logObject;
-        _logMsgsTemp += logObject;
-    }
-
-    private void Update()
-    {
+        _logMsgs = logObject + _logMsgs;
+        _logMsgsTemp = logObject + _logMsgsTemp;
         logDisplay.text = _logMsgsTemp;
     }
 
@@ -93,47 +88,4 @@ public class Logger : MonoBehaviour
         writer.Write(string.Join('\n', _logObjects.Select(s => s.ToCsv())));
         writer.Close();
     }
-
-    // private void OnApplicationQuit()
-    // {
-    //     SaveLogsToDisk();
-    // }
 }
-
-
-// using System;
-// using UnityEngine;
-// using System.Collections;
-//  
-// public class Logger : MonoBehaviour
-// {
-//     string myLog;
-//     Queue myLogQueue = new Queue();
-//
-//     void OnEnable () {
-//         Application.logMessageReceivedThreaded += HandleLog;
-//     }
-//      
-//     void OnDisable () {
-//         Application.logMessageReceived -= HandleLog;
-//     }
-//  
-//     void HandleLog(string logString, string stackTrace, LogType type){
-//         myLog = logString;
-//         string newString = "\n [" + type + "] : " + myLog;
-//         myLogQueue.Enqueue(newString);
-//         if (type == LogType.Exception)
-//         {
-//             newString = "\n" + stackTrace;
-//             myLogQueue.Enqueue(newString);
-//         }
-//         myLog = string.Empty;
-//         foreach(string mylog in myLogQueue){
-//             myLog += mylog;
-//         }
-//     }
-//  
-//     void OnGUI () {
-//         GUILayout.Label(myLog);
-//     }
-// }

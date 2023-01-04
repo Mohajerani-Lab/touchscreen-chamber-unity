@@ -213,7 +213,6 @@ namespace DefaultNamespace
             if (configDropdown.value == 0) return;
             var selectedFile = configDropdown.options[configDropdown.value].text;
             var filePath = $"{RootFolder}/Data/{selectedFile}";
-            Debug.Log(filePath);
             var xmlContentTitle = $"Contents of {selectedFile}:\n\n";
             var xmlContentBody = XmlReader.LoadXmlString(filePath);
             xmlContentDisplay.text = xmlContentTitle + xmlContentBody;
@@ -265,7 +264,6 @@ namespace DefaultNamespace
             ClearGameObjects();
             ClearScene();
             ExperimentPhase = ExperimentPhase.Setup;
-            // StartCoroutine(ParseConfig(_configContent));
         }
 
         private void SetupCanvas()
@@ -582,14 +580,9 @@ namespace DefaultNamespace
         private void CheckDestroyTimer()
         {
             if (!DestroyTimer.IsFinished()) return;
-            
-            _logger.SaveLogsToDisk();
 
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
+            Debug.Log("Termination time passed, ending experiment");
+            SaveAndExit();
         }
 
         private void HandleLoad(XElement element)

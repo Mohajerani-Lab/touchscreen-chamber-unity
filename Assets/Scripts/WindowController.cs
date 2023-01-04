@@ -28,6 +28,7 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
             case ObjectType.Reward:
                 if (GM.SectionCount == 2) break;
                 GM.experimentStarted = true;
+                GM.ExperimentPhase = ExperimentPhase.Reward;
                 break;
             case ObjectType.Punish:
                 if (GM.SectionCount == 2) break;
