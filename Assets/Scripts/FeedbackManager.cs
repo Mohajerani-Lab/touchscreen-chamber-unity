@@ -6,7 +6,7 @@ namespace DefaultNamespace
     public class FeedbackManager : MonoBehaviour
     {
         public static FeedbackManager Instance;
-        private NewGameManager GM;
+        private GameManager GM;
         private SerialComs SC;
         private TrialManager T;
         private int _feedbackIssueCount;
@@ -26,7 +26,7 @@ namespace DefaultNamespace
 
         private void Start()
         {
-            GM = NewGameManager.Instance;
+            GM = GameManager.Instance;
             SC = SerialComs.Instance;
             T = TrialManager.Instance;
             InitialSetup();

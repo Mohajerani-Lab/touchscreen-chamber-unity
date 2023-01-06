@@ -6,7 +6,7 @@ namespace DefaultNamespace
 {
     public class MenuControls : MonoBehaviour
     {
-        private NewGameManager GM;
+        private GameManager GM;
         private TrialManager T;
         private Vector2 _fingerDown;
         private Vector2 _fingerUp;
@@ -18,7 +18,7 @@ namespace DefaultNamespace
 
         private void Start()
         {
-            GM = NewGameManager.Instance;
+            GM = GameManager.Instance;
             T = TrialManager.Instance;
         }
 

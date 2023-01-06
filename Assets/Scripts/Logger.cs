@@ -32,7 +32,7 @@ public class Logger : MonoBehaviour
         }
     }
 
-    private NewGameManager GM;
+    private GameManager GM;
     private readonly List<LogObject> _logObjects = new List<LogObject>();
     private string _logMsgs = "";
     private string _logMsgsTemp = "";
@@ -42,7 +42,7 @@ public class Logger : MonoBehaviour
 
     private void Start()
     {
-        GM = NewGameManager.Instance;
+        GM = GameManager.Instance;
         _sessionName = "Touchscreen-Trial-Game-" + DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
         Debug.Log($"Logger initialized. Session Name: {_sessionName}");
     }

@@ -60,6 +60,8 @@ public class SerialComs : MonoBehaviour
 
     private void OnApplicationQuit()
     {
+        if (!ArduinoConnected) return;
+        
         activityContext.Call("runOnUiThread", new AndroidJavaRunnable((() =>
         {
             serialcomms.Call("closeArduinoConnection");

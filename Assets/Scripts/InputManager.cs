@@ -7,11 +7,11 @@ using UnityEngine;
 
 public class InputManager : MonoBehaviour
 {
-    private NewGameManager GM;
+    private GameManager GM;
 
     private void Start()
     {
-        GM = NewGameManager.Instance;
+        GM = GameManager.Instance;
     }
 
     private void Update()
@@ -30,7 +30,7 @@ public class InputManager : MonoBehaviour
 
         var goType = raycastHitInfo.collider.gameObject.GetComponentInParent<ObjectController>().Type;
 
-        GM.experimentStarted = true;
+        // GM.experimentStarted = true;
 
         switch (goType)
         {

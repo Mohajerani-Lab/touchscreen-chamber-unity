@@ -10,10 +10,11 @@ namespace DefaultNamespace
         public static TrialManager Instance { get; private set; }
         public bool CurTrialFinished { get; set; }
         
-        private NewGameManager GM;
+        private GameManager GM;
         private bool _curTrialStarted;
         private int _curTrialNumber;
         private int _curCorrectionLoopNumber;
+        
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -28,7 +29,7 @@ namespace DefaultNamespace
 
         private void Start()
         {
-            GM = NewGameManager.Instance;
+            GM = GameManager.Instance;
             InitialSetup();
         }
 
@@ -42,7 +43,7 @@ namespace DefaultNamespace
 
         private void Update()
         {
-            if (GM.ExperimentPhase != ExperimentPhase.Trial) return;
+            if (!GM.ExperimentPhase.Equals(ExperimentPhase.Trial)) return;
             
             if (_curTrialNumber >= GM.TrialEvents.Count) return;
             

@@ -25,7 +25,7 @@ namespace DefaultNamespace
         {
             try
             {
-                return Directory.GetFiles(Path.Combine(NewGameManager.Instance.RootFolder, "Data"))
+                return Directory.GetFiles(Path.Combine(GameManager.Instance.RootFolder, "Data"))
                     .Where(file => file.EndsWith("xml"))
                     .Select(Path.GetFileName).ToArray();
             }
