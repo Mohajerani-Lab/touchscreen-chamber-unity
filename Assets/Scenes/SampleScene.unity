@@ -967,8 +967,8 @@ RectTransform:
   m_Father: {fileID: 1654833027}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.59, y: 0.25}
-  m_AnchorMax: {x: 0.9, y: 0.75}
+  m_AnchorMin: {x: 0.59, y: 0}
+  m_AnchorMax: {x: 0.9, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1764,9 +1764,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90fabb0482ae4103ac368372743394af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  experimentStarted: 0
   configDropdown: {fileID: 1201161759}
-  rootFolder: 
   xmlContentDisplay: {fileID: 1610190771}
   menuCanvas: {fileID: 1201632614}
   dualGameCanvas: {fileID: 793314155}
@@ -4118,8 +4116,8 @@ RectTransform:
   m_Father: {fileID: 1654833027}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.09, y: 0.25}
-  m_AnchorMax: {x: 0.41, y: 0.75}
+  m_AnchorMin: {x: 0.09, y: 0}
+  m_AnchorMax: {x: 0.41, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
