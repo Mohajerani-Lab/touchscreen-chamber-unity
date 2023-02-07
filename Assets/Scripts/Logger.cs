@@ -39,10 +39,12 @@ public class Logger : MonoBehaviour
     [SerializeField] private TextMeshProUGUI logDisplay;
     private string _sessionName;
     private string _reportDirectory;
+    public bool LogsSaved { get; private set; }
 
     private void Start()
     {
         GM = GameManager.Instance;
+        LogsSaved = false;
         _sessionName = "Touchscreen-Trial-Game-" + DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
         Debug.Log($"Logger initialized. Session Name: {_sessionName}");
     }
@@ -66,6 +68,8 @@ public class Logger : MonoBehaviour
         _logMsgs = logObject + _logMsgs;
         _logMsgsTemp = logObject + _logMsgsTemp;
         logDisplay.text = _logMsgsTemp;
+
+        LogsSaved = false;
     }
 
     public void ClearLogDisplay()
@@ -88,5 +92,7 @@ public class Logger : MonoBehaviour
         var writer = new StreamWriter( $"{Path.Combine(_reportDirectory, _sessionName)}.csv");
         writer.Write(string.Join('\n', _logObjects.Select(s => s.ToCsv())));
         writer.Close();
+
+        LogsSaved = true;
     }
 }

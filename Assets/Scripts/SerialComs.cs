@@ -23,7 +23,7 @@ public class SerialComs : MonoBehaviour
         using (var pluginClass = new AndroidJavaClass("com.mohajeranilab.serialcomms.Plugin"))
         {
             serialcomms = pluginClass.CallStatic<AndroidJavaObject>("instance");
-            serialcomms.Call("setContext", activityContext);
+            serialcomms.Call("start", activityContext);
         }
     }
 

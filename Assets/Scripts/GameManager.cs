@@ -36,11 +36,14 @@ namespace DefaultNamespace
         public bool CueActive { get; private set; }
         public bool NoInputRequired { get; private set; }
         public bool InitialRewardsActive { get; private set; }
+        public bool CorrectionLoopActive { get; private set; }
         public bool FirstTrialSucceeded { get; set; }
         public bool TrialSucceeded { get; set; }
         public bool RepeatTrial { get; set; }
         public bool DivsActive { get; private set; }
         private bool _isSimilarToPrevious;
+        
+        public bool AllowVStack { get; private set; }
 
 
         public int SectionCount { get; private set; }
@@ -55,6 +58,7 @@ namespace DefaultNamespace
         [SerializeField] public GameObject menuCanvas;
         [SerializeField] private GameObject dualGameCanvas;
         [SerializeField] private GameObject quadGameCanvas;
+        [SerializeField] private GameObject quadPanel;
         [SerializeField] public GameObject feedbackCanvas;
         [SerializeField] private Shader bundleShader;
         [SerializeField] public List<GameObject> prefabs;
@@ -73,6 +77,9 @@ namespace DefaultNamespace
         private float _orthoSize;
         private float _orthoSizeWidth;
 
+        private Vector2 _quadPanelAnchorMin;
+        private Vector2 _quadPanelAnchorMax;
+        
         private Logger _logger;
 
         // New vars
@@ -129,6 +136,9 @@ namespace DefaultNamespace
 
             MainCamera = Camera.main;
             _orthoSize = MainCamera!.orthographicSize * 2;
+            
+            _quadPanelAnchorMin = quadPanel.GetComponent<RectTransform>().anchorMin;
+            _quadPanelAnchorMax = quadPanel.GetComponent<RectTransform>().anchorMax;
 
             AudioSource = gameObject.AddComponent<AudioSource>();
 
@@ -143,6 +153,7 @@ namespace DefaultNamespace
             CueActive = false;
             NoInputRequired = false;
             RepeatTrial = false;
+            AllowVStack = true;
             InitialRewardsCount = 0;
         }
 
@@ -226,6 +237,7 @@ namespace DefaultNamespace
             CueActive = false;
             NoInputRequired = false;
             RepeatTrial = false;
+            AllowVStack = true;
             InitialRewardsCount = 0;
         }
 
@@ -479,9 +491,9 @@ namespace DefaultNamespace
                         if (!InitialRewardsActive) break;
                         InitialRewardsCount = int.Parse(e.Attribute("count")!.Value);
                         break;
-                    // case "correction-loop":
-                    //     _correctionLoopActive = bool.Parse(e.Attribute("active")!.Value);
-                    //     break;
+                    case "correction-loop":
+                        CorrectionLoopActive = bool.Parse(e.Attribute("active")!.Value);
+                        break;
                     case "punish-on-empty":
                         PunishOnEmpty = bool.Parse(e.Attribute("active")!.Value);
                         break;
@@ -496,27 +508,33 @@ namespace DefaultNamespace
                         _gameCanvas = SectionCount == 2 ? dualGameCanvas : quadGameCanvas;
                         
                         var camZPos = MainCamera!.transform.position.z;
+
                         var scHeight = Screen.height;
                         var scWidth = Screen.width;
                         
+                        // Screen size for the quadrant trial
+                        var scHeightQ = scHeight * (_quadPanelAnchorMax.y - _quadPanelAnchorMin.y);
+                        var scWidthQ = scWidth * (_quadPanelAnchorMax.x - _quadPanelAnchorMin.x);
+                        var scWidthQOffset = scWidth * _quadPanelAnchorMin.x;
+
                         SpawnPoints = SectionCount == 4 ? new []
-                            {
-                                new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                    (new Vector3(scWidth / 4f, scHeight * 3/4f, -camZPos)), quadWindows[0]),
-                                new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                    (new Vector3(scWidth * 3/4f, scHeight * 3/4f, -camZPos)), quadWindows[1]),
-                                new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                    (new Vector3(scWidth / 4f, scHeight / 4f, -camZPos)), quadWindows[2]),
-                                new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                    (new Vector3(scWidth * 3/4f, scHeight / 4f, -camZPos)), quadWindows[3]),
-                            } :
-                            new []
-                            {
-                                new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                    (new Vector3(scWidth / 4f, scHeight / 2f, -camZPos)), dualWindows[0]),
-                                new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                    (new Vector3(scWidth * 3/4f, scHeight / 2f, -camZPos)), dualWindows[1]) 
-                            };
+                        {
+                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                (new Vector3(scWidthQ / 4f + scWidthQOffset, scHeightQ * 3/4f, -camZPos)), quadWindows[0]),
+                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                (new Vector3(scWidthQ * 3/4f + scWidthQOffset, scHeightQ * 3/4f, -camZPos)), quadWindows[1]),
+                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                (new Vector3(scWidthQ / 4f + scWidthQOffset, scHeightQ / 4f, -camZPos)), quadWindows[2]),
+                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                (new Vector3(scWidthQ * 3/4f + scWidthQOffset, scHeightQ / 4f, -camZPos)), quadWindows[3]),
+                        } :
+                        new []
+                        {
+                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                (new Vector3(scWidth / 4f, scHeight / 2f, -camZPos)), dualWindows[0]),
+                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                (new Vector3(scWidth * 3/4f, scHeight / 2f, -camZPos)), dualWindows[1]) 
+                        };
                         
                         break;
                     case "dividers":
@@ -529,6 +547,9 @@ namespace DefaultNamespace
                         var divColor = e.Attribute("color")!.Value.Split(',').
                             Select(x => float.Parse(x) / 255).ToArray();
                         DivColor = new Color(divColor[0], divColor[1], divColor[2]);
+                        break;
+                    case "vertical-stack":
+                        AllowVStack = bool.Parse(e.Attribute("active")!.Value);
                         break;
                     case "sprite":
                         var spriteColor = e.Attribute("color")!.Value.Split(',')
@@ -558,10 +579,15 @@ namespace DefaultNamespace
 
         private void CheckDestroyTimer()
         {
+            if (!DestroyTimer._started) return;
             if (!DestroyTimer.IsFinished()) return;
 
-            Debug.Log("Termination time passed, ending experiment");
-            SaveAndExit();
+            Debug.Log("Termination time passed, saving experiment results");
+            _logger.SaveLogsToDisk();
+            
+            ClearGameObjects();
+            ClearScene();
+            ExperimentPhase = ExperimentPhase.Preprocess;
         }
 
         private void HandleLoad(XElement element)
@@ -636,11 +662,25 @@ namespace DefaultNamespace
             
             ResetSpawnWindows();
             
+            _uniqueSpawnPositions.Clear();
+            
             while (true)
             {
-                _uniqueSpawnPositions.Clear();
                 
                 var tempArray = Enumerable.Range(0, SectionCount).OrderBy(_ => Rand.Next()).ToArray();
+
+                if (!AllowVStack)
+                {
+                    if (
+                        tempArray[0] == 0 && tempArray[1] == 2 ||
+                        tempArray[0] == 2 && tempArray [1] == 0 ||
+                        tempArray[0] == 1 && tempArray[1] == 3 ||
+                        tempArray[0] == 3 && tempArray [1] == 1
+                        )
+                    {
+                       continue; 
+                    }
+                }    
                 
                 for (var i = 0; i < SectionCount; i++)
                 {
@@ -669,8 +709,11 @@ namespace DefaultNamespace
                     _lastUniqueSpawnPositions[i] = tempArray[i];
                 }
 
+                // Debug.Log($"{tempArray[0]}, {tempArray[1]}, {tempArray[2]}, {tempArray[3]}");
+
                 break;
             }
+            
         }
         
         public void HandleObject(XElement element)
@@ -735,7 +778,7 @@ namespace DefaultNamespace
         
         public void SaveAndExit()
         {
-            _logger.SaveLogsToDisk();
+            if (!_logger.LogsSaved) _logger.SaveLogsToDisk();
 
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;

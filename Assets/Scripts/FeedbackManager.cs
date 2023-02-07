@@ -215,8 +215,13 @@ namespace DefaultNamespace
             if (!GM.Timer.IsFinished()) return;
 
             T.CurTrialFinished = true;
-            GM.RepeatTrial = true;
-            Debug.Log("Entered Correction Loop");
+
+            if (GM.CorrectionLoopActive)
+            {
+                GM.RepeatTrial = true;
+                Debug.Log("Entered Correction Loop");
+            }
+            
             GM.ExperimentPhase = ExperimentPhase.Trial;
         }
     }
