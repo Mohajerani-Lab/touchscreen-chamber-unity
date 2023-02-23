@@ -6,6 +6,7 @@ using System.Xml.Linq;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Random = System.Random;
 
@@ -57,13 +58,21 @@ namespace DefaultNamespace
         [SerializeField] private TextMeshProUGUI xmlContentDisplay;
         [SerializeField] public GameObject menuCanvas;
         [SerializeField] private GameObject dualGameCanvas;
+        [SerializeField] private GameObject dualPanel;
         [SerializeField] private GameObject quadGameCanvas;
         [SerializeField] private GameObject quadPanel;
+        [SerializeField] private Vector2 quadPanelDefaultMinSize;
+        [SerializeField] private Vector2 quadPanelDefaultMaxSize;
+        [SerializeField] private GameObject quadRowGameCanvas;
+        [SerializeField] private GameObject quadRowPanel;
+        [SerializeField] private Vector2 quadRowPanelDefaultMinSize;
+        [SerializeField] private Vector2 quadRowPanelDefaultMaxSize;
         [SerializeField] public GameObject feedbackCanvas;
         [SerializeField] private Shader bundleShader;
         [SerializeField] public List<GameObject> prefabs;
-        [SerializeField] private WindowController[] quadWindows;
         [SerializeField] private WindowController[] dualWindows;
+        [SerializeField] private WindowController[] quadWindows;
+        [SerializeField] private WindowController[] quadRowWindows;
         
         
         public XElement TrialData { get; private set; }
@@ -77,8 +86,18 @@ namespace DefaultNamespace
         private float _orthoSize;
         private float _orthoSizeWidth;
 
-        private Vector2 _quadPanelAnchorMin;
-        private Vector2 _quadPanelAnchorMax;
+        private RectTransform _dualPanelRectTransform;
+        private RectTransform _quadPanelRectTransform;
+        private RectTransform _quadRowPanelRectTransform;
+
+        private RectTransform _gamePanelRectTransform;
+
+        private float _scWidthQ;
+        private float _scHeightQ;
+        private float _scWidthQOffset;
+        
+        // private Vector2 _quadPanelAnchorMin;
+        // private Vector2 _quadPanelAnchorMax;
         
         private Logger _logger;
 
@@ -96,8 +115,6 @@ namespace DefaultNamespace
         public List<XElement> TrialEvents { get; private set; }
 
         private Stack<int> _uniqueSpawnPositions;
-       
-
 
         private void Awake()
         {
@@ -137,8 +154,9 @@ namespace DefaultNamespace
             MainCamera = Camera.main;
             _orthoSize = MainCamera!.orthographicSize * 2;
             
-            _quadPanelAnchorMin = quadPanel.GetComponent<RectTransform>().anchorMin;
-            _quadPanelAnchorMax = quadPanel.GetComponent<RectTransform>().anchorMax;
+            _dualPanelRectTransform = dualPanel.GetComponent<RectTransform>();
+            _quadPanelRectTransform = quadPanel.GetComponent<RectTransform>();
+            _quadRowPanelRectTransform = quadRowPanel.GetComponent<RectTransform>();
 
             AudioSource = gameObject.AddComponent<AudioSource>();
 
@@ -225,6 +243,7 @@ namespace DefaultNamespace
                         
             dualGameCanvas.SetActive(false);
             quadGameCanvas.SetActive(false);
+            quadRowGameCanvas.SetActive(false);
 
             T.InitialSetup();
             F.InitialSetup();
@@ -505,37 +524,130 @@ namespace DefaultNamespace
                         break;
                     case "sections":
                         SectionCount = int.Parse(e.Attribute("count")!.Value);
-                        _gameCanvas = SectionCount == 2 ? dualGameCanvas : quadGameCanvas;
-                        
+                        var size = e.Attribute("size")?.Value;
+
+                        switch (SectionCount)
+                        {
+                            case 2:
+                                _gameCanvas = dualGameCanvas;
+                                _gamePanelRectTransform = _dualPanelRectTransform;
+                                break;
+                            case 4:
+
+                                Vector2 panelDefaultMinSize;
+                                Vector2 panelDefaultMaxSize;
+
+                                if (size == "1x4")
+                                {
+                                    _gameCanvas = quadRowGameCanvas;
+                                    _gamePanelRectTransform = _quadRowPanelRectTransform;
+                                    panelDefaultMinSize = quadRowPanelDefaultMinSize;
+                                    panelDefaultMaxSize = quadRowPanelDefaultMaxSize;
+                                }
+                                else
+                                {
+                                    _gameCanvas = quadGameCanvas;
+                                    _gamePanelRectTransform = _quadPanelRectTransform;
+                                    panelDefaultMinSize = quadPanelDefaultMinSize;
+                                    panelDefaultMaxSize = quadPanelDefaultMaxSize;
+                                }
+
+                                try
+                                {
+                                    var top = float.Parse(e.Attribute("top")!.Value);
+                                    var bottom = float.Parse(e.Attribute("bottom")!.Value);
+                                    var left = float.Parse(e.Attribute("left")!.Value);
+                                    var right = float.Parse(e.Attribute("right")!.Value);
+
+                                    _gamePanelRectTransform.anchorMin = new Vector2(left, bottom);
+                                    _gamePanelRectTransform.anchorMax = new Vector2(right, top);
+
+                                    _gamePanelRectTransform.offsetMin = Vector2.zero;
+                                    _gamePanelRectTransform.offsetMax = Vector2.zero;
+                                }
+                                catch (Exception exception)
+                                {
+                                    // No custom size defined
+                                    _gamePanelRectTransform.anchorMin = panelDefaultMinSize;
+                                    _gamePanelRectTransform.anchorMax = panelDefaultMaxSize;
+
+                                    _gamePanelRectTransform.offsetMin = Vector2.zero;
+                                    _gamePanelRectTransform.offsetMax = Vector2.zero;
+                                }
+
+                                break;
+                        }
+
+
                         var camZPos = MainCamera!.transform.position.z;
 
                         var scHeight = Screen.height;
                         var scWidth = Screen.width;
-                        
-                        // Screen size for the quadrant trial
-                        var scHeightQ = scHeight * (_quadPanelAnchorMax.y - _quadPanelAnchorMin.y);
-                        var scWidthQ = scWidth * (_quadPanelAnchorMax.x - _quadPanelAnchorMin.x);
-                        var scWidthQOffset = scWidth * _quadPanelAnchorMin.x;
 
-                        SpawnPoints = SectionCount == 4 ? new []
+                        var anchorMax = _gamePanelRectTransform.anchorMax;
+                        var anchorMin = _gamePanelRectTransform.anchorMin;
+
+                        // Screen size for the quadrant trial
+                        _scHeightQ = scHeight * (anchorMax.y - anchorMin.y);
+                        _scWidthQ = scWidth * (anchorMax.x - anchorMin.x);
+                        _scWidthQOffset = scWidth * anchorMin.x;
+
+                        switch (SectionCount)
                         {
-                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                (new Vector3(scWidthQ / 4f + scWidthQOffset, scHeightQ * 3/4f, -camZPos)), quadWindows[0]),
-                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                (new Vector3(scWidthQ * 3/4f + scWidthQOffset, scHeightQ * 3/4f, -camZPos)), quadWindows[1]),
-                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                (new Vector3(scWidthQ / 4f + scWidthQOffset, scHeightQ / 4f, -camZPos)), quadWindows[2]),
-                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                (new Vector3(scWidthQ * 3/4f + scWidthQOffset, scHeightQ / 4f, -camZPos)), quadWindows[3]),
-                        } :
-                        new []
-                        {
-                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                (new Vector3(scWidth / 4f, scHeight / 2f, -camZPos)), dualWindows[0]),
-                            new SpawnPoint(MainCamera!.ScreenToWorldPoint
-                                (new Vector3(scWidth * 3/4f, scHeight / 2f, -camZPos)), dualWindows[1]) 
-                        };
-                        
+                            case 2:
+                                SpawnPoints = new[]
+                                {
+                                    new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                        (new Vector3(scWidth * 1 / 4f, scHeight * 1 / 2f, -camZPos)), dualWindows[0]),
+                                    new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                        (new Vector3(scWidth * 3 / 4f, scHeight * 1 / 2f, -camZPos)), dualWindows[1])
+                                };
+                                break;
+                                
+                            case 4:
+                                if (size == "1x4")
+                                {
+                                    SpawnPoints = new[]
+                                    {
+                                        new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                        (new Vector3(_scWidthQ * 1 / 8f + _scWidthQOffset, _scHeightQ * 1 / 2f,
+                                            -camZPos)), quadRowWindows[0]),
+                                        new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                        (new Vector3(_scWidthQ * 3 / 8f + _scWidthQOffset, _scHeightQ * 1 / 2f,
+                                            -camZPos)), quadRowWindows[1]),
+                                        new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                        (new Vector3(_scWidthQ * 5 / 8f + _scWidthQOffset, _scHeightQ * 1 / 2f,
+                                            -camZPos)), quadRowWindows[2]),
+                                        new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                        (new Vector3(_scWidthQ * 7 / 8f + _scWidthQOffset, _scHeightQ * 1 / 2f,
+                                            -camZPos)), quadRowWindows[3]),
+                                    };
+                                }
+                                else
+                                {
+                                    SpawnPoints = new[]
+                                    {
+                                        new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                            (new Vector3(_scWidthQ * 1 / 4f + _scWidthQOffset, _scHeightQ * 3 / 4f,
+                                                -camZPos)),
+                                            quadWindows[0]),
+                                        new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                        (new Vector3(_scWidthQ * 3 / 4f + _scWidthQOffset, _scHeightQ * 3 / 4f,
+                                            -camZPos)), quadWindows[1]),
+                                        new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                            (new Vector3(_scWidthQ * 1 / 4f + _scWidthQOffset, _scHeightQ * 1 / 4f,
+                                                -camZPos)),
+                                            quadWindows[2]),
+                                        new SpawnPoint(MainCamera!.ScreenToWorldPoint
+                                            (new Vector3(_scWidthQ * 3 / 4f + _scWidthQOffset, _scHeightQ * 1 / 4f,
+                                                -camZPos)),
+                                            quadWindows[3]),
+                                    };
+                                }
+                                
+                                break;
+                        }
+
                         break;
                     case "dividers":
                         DivsActive = bool.Parse(e.Attribute("active")!.Value);
@@ -753,11 +865,20 @@ namespace DefaultNamespace
             var minBound = MainCamera.WorldToScreenPoint(bounds.min);
             var maxBound = MainCamera.WorldToScreenPoint(bounds.max);
             var midBound = MainCamera.WorldToScreenPoint(bounds.center);
-            
-            var division = SectionCount == 2 ? 2f : 3f;
 
-            var scaleX = Screen.width / division / (Math.Abs(maxBound.x - minBound.x));
-            var scaleY = Screen.height / division / (Math.Abs(maxBound.y - minBound.y));
+            float scaleX, scaleY;
+
+            if (SectionCount == 2)
+            {
+                scaleX = Screen.width  / 2f / (Math.Abs(maxBound.x - minBound.x));
+                scaleY = Screen.height / 2f / (Math.Abs(maxBound.y - minBound.y)); 
+            }
+            else
+            {
+                scaleX = _scWidthQ  / 3f / (Math.Abs(maxBound.x - minBound.x));
+                scaleY = _scHeightQ / 3f / (Math.Abs(maxBound.y - minBound.y)); 
+            }
+
             var scale = Math.Min(scaleX, scaleY);
 
             go.transform.localScale = new Vector3(scaleOverride * scale, scaleOverride * scale, scaleOverride * scale);
