@@ -23,12 +23,12 @@ public class Logger : MonoBehaviour
 
         public override string ToString()
         {
-            return $"[ {_type} ] [ {_timeCreated} ] {_message}\n";
+            return $"[ {_type} ] [ {_timeCreated:yyyy/MM/dd HH:mm:ss.fff} ] {_message}\n";
         }
 
         public string ToCsv()
         {
-            return $"{_type},{_timeCreated},{_message.Replace(',', ' ')}";
+            return $"{_type},{_timeCreated:yyyy/MM/dd HH:mm:ss.fff},{_message.Replace(',', ' ')}";
         }
     }
 
