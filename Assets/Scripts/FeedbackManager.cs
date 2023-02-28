@@ -9,8 +9,10 @@ namespace DefaultNamespace
         private GameManager GM;
         private SerialComs SC;
         private TrialManager T;
-        private int _feedbackIssueCount;
         private bool _isFeedbackFirstPhase;
+        private int _feedbackIssueCount;
+        public int _rewardedCount;
+        public int _punishedCount;
 
         private void Awake()
         {
@@ -35,6 +37,8 @@ namespace DefaultNamespace
         public void InitialSetup()
         {
             _feedbackIssueCount = 0;
+            _rewardedCount = 0;
+            _punishedCount = 0;
             _isFeedbackFirstPhase = true;
         }
 
@@ -139,12 +143,18 @@ namespace DefaultNamespace
                 GM.InputReceived = true;
                 GM.TrialSucceeded = true;
                 _isFeedbackFirstPhase = true;
-
+                
                 if (GM.RepeatTrial)
                 {
                     GM.RepeatTrial = false;
                     Debug.Log("Correction loop finished");
                 }
+                else
+                {
+                    _rewardedCount++;
+                }
+                
+                
                 
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
             
@@ -194,7 +204,12 @@ namespace DefaultNamespace
             {
                 GM.InputReceived = true;
                 _isFeedbackFirstPhase = true;
-            
+
+                if (!GM.RepeatTrial)
+                {
+                    _punishedCount++;
+                }
+                
                 Debug.Log(GM.Punish.Note);
 
                 GM.AudioSource.PlayOneShot(GM.Punish.AudioClip);
