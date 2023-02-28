@@ -9,9 +9,9 @@ namespace DefaultNamespace
     {
         public static TrialManager Instance { get; private set; }
         public bool CurTrialFinished { get; set; }
-        
         private GameManager GM;
         private FeedbackManager FM;
+        private Logger _logger;
         private bool _curTrialStarted;
         private int _curTrialNumber;
         private int _curCorrectionLoopNumber;
@@ -32,6 +32,7 @@ namespace DefaultNamespace
         {
             GM = GameManager.Instance;
             FM = FeedbackManager.Instance;
+            _logger = GetComponent<Logger>();
             InitialSetup();
         }
 
@@ -51,6 +52,7 @@ namespace DefaultNamespace
             {
                 Debug.Log($"Total Rewarded: {FM._rewardedCount}");
                 Debug.Log($"Total Punished: {FM._punishedCount}");
+                _logger.SaveLogsToDisk();
                 GM.ExperimentPhase = ExperimentPhase.Preprocess;
                 return;
             }
