@@ -1,11 +1,13 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DefaultNamespace
 {
     public class FeedbackManager : MonoBehaviour
     {
         public static FeedbackManager Instance;
+        public bool IsBlinkPhaseOneReward;
         private GameManager GM;
         private SerialComs SC;
         private TrialManager T;
@@ -39,6 +41,7 @@ namespace DefaultNamespace
             _feedbackIssueCount = 0;
             _rewardedCount = 0;
             _punishedCount = 0;
+            IsBlinkPhaseOneReward = false;
             _isFeedbackFirstPhase = true;
         }
 
@@ -53,7 +56,14 @@ namespace DefaultNamespace
                     IssueHabituationReward();
                     break;
                 case ExperimentPhase.Reward:
-                    IssueReward();
+                    if (IsBlinkPhaseOneReward)
+                    {
+                        IssuePhaseOneReward();
+                    }
+                    else
+                    {
+                        IssueReward();
+                    }
                     break;
                 case ExperimentPhase.Punish:
                     IssuePunish();
@@ -153,23 +163,24 @@ namespace DefaultNamespace
                 {
                     _rewardedCount++;
                 }
-                
-                
-                
+
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
             
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
                     if (SC.ArduinoConnected)
                     {
-                        SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+
+                        var coefficient= GM.InTwoPhaseBlink ? 2 : 1;
+                        
+                        SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration * coefficient}");
                     }
                     else
                     {
                         Debug.Log("Connection to arduino not established.");
                     }
                 }
-            
+
                 Debug.Log(GM.Reward.Note);
 
                 if (!GM.NoInputRequired)
@@ -197,9 +208,35 @@ namespace DefaultNamespace
             if (!GM.FirstTrialSucceeded) GM.FirstTrialSucceeded = true;
             GM.ExperimentPhase = ExperimentPhase.Trial;
         }
+        
+        
+        
+        public void IssuePhaseOneReward()
+        {
+            GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
+
+            GM.ExperimentPhase = ExperimentPhase.Wait;
+            
+            GM.ClearGameObjects();
+            
+            if (!Application.platform.Equals(RuntimePlatform.Android)) return;
+            
+            if (SC.ArduinoConnected)
+            {
+                SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+            }
+            else
+            {
+                Debug.Log("Connection to arduino not established.");
+            }
+
+        }
+        
+        
 
         public void IssuePunish()
         {
+            IsBlinkPhaseOneReward = false;
             if (!GM.Timer._started)
             {
                 GM.InputReceived = true;

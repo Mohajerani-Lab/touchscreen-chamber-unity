@@ -9,5 +9,6 @@
         HabituationReward,
         Reward,
         Punish,
+        Wait
     }
 }

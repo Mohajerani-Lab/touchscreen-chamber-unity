@@ -66,7 +66,7 @@ namespace DefaultNamespace
                     ? $"Commencing Correction Loop #{++_curCorrectionLoopNumber}"
                     : $"Commencing trial #{_curTrialNumber + 1} from {GM.TrialEvents.Count}");
 
-                GM.GenerateNewPositions();
+                // GM.GenerateNewPositions();
 
                 foreach (var element in GM.TrialData.Elements())
                 {
@@ -74,9 +74,17 @@ namespace DefaultNamespace
                     
                     var collection = GM.HandleCollection(element);
                     
-                    foreach (var cElement in collection.Where(x => x.Name.ToString().Equals("object")))
+                    foreach (var cElement in collection)
                     {
-                        GM.HandleObject(cElement);
+                        switch (cElement.Name.ToString())
+                        {
+                            case "object":
+                                GM.HandleObject(cElement);
+                                break;
+                            case "blink":
+                                GM.HandleBlink(cElement);
+                                break;
+                        }
                     }
                 }
 

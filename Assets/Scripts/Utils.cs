@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Xml.Linq;
 
 namespace DefaultNamespace
@@ -8,6 +9,11 @@ namespace DefaultNamespace
         public static XElement FindElementByName(XElement parent, string childName)
         {
             return parent.Elements().Where(e => e.Name.ToString().Equals(childName)).ToArray()[0];
+        }
+        
+        public static long CurrentTimeMillis()
+        {
+            return DateTimeOffset.Now.ToUnixTimeMilliseconds();
         }
     }
 }

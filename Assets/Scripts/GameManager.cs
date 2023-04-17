@@ -8,6 +8,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
+using Object = System.Object;
 using Random = System.Random;
 
 namespace DefaultNamespace
@@ -31,6 +32,8 @@ namespace DefaultNamespace
         public Random Rand;
         public Camera MainCamera { get; private set; }
         public TMP_Dropdown configDropdown;
+
+        public string ExperimentType;
         
         public bool InputReceived { get; set; }
         public bool PunishOnEmpty { get; private set; }
@@ -41,6 +44,7 @@ namespace DefaultNamespace
         public bool FirstTrialSucceeded { get; set; }
         public bool TrialSucceeded { get; set; }
         public bool RepeatTrial { get; set; }
+        public bool InTwoPhaseBlink { get; set; }
         public bool DivsActive { get; private set; }
         private bool _isSimilarToPrevious;
         
@@ -73,6 +77,7 @@ namespace DefaultNamespace
         [SerializeField] private WindowController[] dualWindows;
         [SerializeField] private WindowController[] quadWindows;
         [SerializeField] private WindowController[] quadRowWindows;
+        [SerializeField] private Image[] dividers;
         
         
         public XElement TrialData { get; private set; }
@@ -267,6 +272,16 @@ namespace DefaultNamespace
             {
                 Destroy(go.gameObject);
             }
+
+            var windowsInScene = FindObjectsOfType<WindowController>();
+            foreach (var w in windowsInScene)
+            {
+                w.StopBlinking();
+                if (InTwoPhaseBlink && !F.IsBlinkPhaseOneReward && w.Type.Equals(ObjectType.Reward))
+                {
+                    StartCoroutine(w.BlinkOnce());
+                }
+            }
         }
 
         public void SetupNewScene()
@@ -384,15 +399,14 @@ namespace DefaultNamespace
         
         private void SetupReward(XElement element)
         {
-            var tone = Utils.FindElementByName(element, "tone");
             var note = Utils.FindElementByName(element, "note");
-            var timer = Utils.FindElementByName(element, "timer");
+            var tone = Utils.FindElementByName(element, "tone");
             var valve = Utils.FindElementByName(element, "valve");
+            var timer = Utils.FindElementByName(element, "timer");
             
-            
+            var noteString = note.Attribute("text")!.Value;
             var toneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
             var toneDuration = float.Parse(tone.Attribute("duration")!.Value);
-            var noteString = note.Attribute("text")!.Value;
             var waitDuration = float.Parse(timer.Attribute("duration")!.Value);
             var valveOpenDuration = float.Parse(valve.Attribute("duration")!.Value);
             
@@ -505,6 +519,9 @@ namespace DefaultNamespace
             {
                 switch (e.Name.ToString())
                 {
+                    case "experiment":
+                        ExperimentType = e.Attribute("type")!.Value;
+                        break;
                     case "initial-rewards":
                         InitialRewardsActive = bool.Parse(e.Attribute("active")!.Value);
                         if (!InitialRewardsActive) break;
@@ -562,8 +579,8 @@ namespace DefaultNamespace
                                     _gamePanelRectTransform.anchorMin = new Vector2(left, bottom);
                                     _gamePanelRectTransform.anchorMax = new Vector2(right, top);
 
-                                    _gamePanelRectTransform.offsetMin = Vector2.zero;
-                                    _gamePanelRectTransform.offsetMax = Vector2.zero;
+                                    _gamePanelRectTransform.offsetMin = new Vector2(5, 0);
+                                    _gamePanelRectTransform.offsetMax = new Vector2(5, 10);
                                 }
                                 catch (Exception exception)
                                 {
@@ -571,8 +588,8 @@ namespace DefaultNamespace
                                     _gamePanelRectTransform.anchorMin = panelDefaultMinSize;
                                     _gamePanelRectTransform.anchorMax = panelDefaultMaxSize;
 
-                                    _gamePanelRectTransform.offsetMin = Vector2.zero;
-                                    _gamePanelRectTransform.offsetMax = Vector2.zero;
+                                    _gamePanelRectTransform.offsetMin = new Vector2(5, 0);
+                                    _gamePanelRectTransform.offsetMax = new Vector2(5, 10);
                                 }
 
                                 break;
@@ -830,6 +847,8 @@ namespace DefaultNamespace
         
         public void HandleObject(XElement element)
         {
+            GenerateNewPositions();
+            
             var eId = element.Attribute("id")?.Value;
             
             var objectName = element.Attribute("bundle")?.Value.Split('/').ToList().Last();
@@ -896,6 +915,32 @@ namespace DefaultNamespace
             spawnPoint.Window.Type = type;
             go.GetComponent<ObjectController>().Type = type;
         }
+
+
+        public void HandleBlink(XElement element)
+        {
+            try
+            {
+                InTwoPhaseBlink = bool.Parse(element.Attribute("two-phase")!.Value);
+            }
+            catch (Exception e)
+            {
+                InTwoPhaseBlink = false;
+            }
+            
+            var blinkFrequency = float.Parse(element.Attribute("frequency")!.Value);
+            var blinkColor = element.Attribute("color")!.Value.Split(',')
+                .Select(x => float.Parse(x) / 255).ToArray();
+            
+            GenerateNewPositions();
+            
+            var spawnPoint = SpawnPoints[_uniqueSpawnPositions.Pop()];
+            
+            spawnPoint.Window.Type = ObjectType.Reward;
+
+            spawnPoint.Window.StartBlinking(blinkFrequency, blinkColor);
+        }
+        
         
         public void SaveAndExit()
         {
