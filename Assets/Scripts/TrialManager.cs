@@ -66,7 +66,7 @@ namespace DefaultNamespace
                     ? $"Commencing Correction Loop #{++_curCorrectionLoopNumber}"
                     : $"Commencing trial #{_curTrialNumber + 1} from {GM.TrialEvents.Count}");
 
-                // GM.GenerateNewPositions();
+                GM.GenerateNewPositions();
 
                 foreach (var element in GM.TrialData.Elements())
                 {

@@ -847,7 +847,7 @@ namespace DefaultNamespace
         
         public void HandleObject(XElement element)
         {
-            GenerateNewPositions();
+            // GenerateNewPositions();
             
             var eId = element.Attribute("id")?.Value;
             
@@ -932,7 +932,7 @@ namespace DefaultNamespace
             var blinkColor = element.Attribute("color")!.Value.Split(',')
                 .Select(x => float.Parse(x) / 255).ToArray();
             
-            GenerateNewPositions();
+            // GenerateNewPositions();
             
             var spawnPoint = SpawnPoints[_uniqueSpawnPositions.Pop()];
             
