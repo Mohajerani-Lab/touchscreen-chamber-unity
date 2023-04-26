@@ -131,6 +131,8 @@ namespace DefaultNamespace
             {
                 Instance = this;
             }
+
+            Application.targetFrameRate = 20;
         }
 
         private void Start()
@@ -177,6 +179,7 @@ namespace DefaultNamespace
             NoInputRequired = false;
             RepeatTrial = false;
             AllowVStack = true;
+            InTwoPhaseBlink = false;
             InitialRewardsCount = 0;
         }
 
@@ -263,6 +266,7 @@ namespace DefaultNamespace
             RepeatTrial = false;
             AllowVStack = true;
             InitialRewardsCount = 0;
+            InTwoPhaseBlink = false;
         }
 
         public void ClearGameObjects()
