@@ -213,9 +213,22 @@ namespace DefaultNamespace
         
         public void IssuePhaseOneReward()
         {
-            GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
+            if (!GM.Timer._started)
+            {
+                IssueSimpleReward();
+                GM.InputReceived = true;
+                GM.Timer.Begin(GM.TwoPhaseBlinkWait);
+            }
 
+            if (!GM.Timer.IsFinished()) return;
+            
+            GM.InputReceived = false;
             GM.ExperimentPhase = ExperimentPhase.Wait;
+        }
+
+        private void IssueSimpleReward()
+        {
+            GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
             
             GM.ClearGameObjects();
             
@@ -229,7 +242,6 @@ namespace DefaultNamespace
             {
                 Debug.Log("Connection to arduino not established.");
             }
-
         }
         
         

@@ -45,6 +45,7 @@ namespace DefaultNamespace
         public bool TrialSucceeded { get; set; }
         public bool RepeatTrial { get; set; }
         public bool InTwoPhaseBlink { get; set; }
+        public float TwoPhaseBlinkWait { get; set; }
         public bool DivsActive { get; private set; }
         private bool _isSimilarToPrevious;
         
@@ -132,7 +133,7 @@ namespace DefaultNamespace
                 Instance = this;
             }
 
-            Application.targetFrameRate = 20;
+            Application.targetFrameRate = -1;
         }
 
         private void Start()
@@ -180,6 +181,7 @@ namespace DefaultNamespace
             RepeatTrial = false;
             AllowVStack = true;
             InTwoPhaseBlink = false;
+            TwoPhaseBlinkWait = 0;
             InitialRewardsCount = 0;
         }
 
@@ -267,6 +269,7 @@ namespace DefaultNamespace
             AllowVStack = true;
             InitialRewardsCount = 0;
             InTwoPhaseBlink = false;
+            TwoPhaseBlinkWait = 0;
         }
 
         public void ClearGameObjects()
@@ -926,6 +929,7 @@ namespace DefaultNamespace
             try
             {
                 InTwoPhaseBlink = bool.Parse(element.Attribute("two-phase")!.Value);
+                TwoPhaseBlinkWait = float.Parse(element.Attribute("wait-between")!.Value);
             }
             catch (Exception e)
             {
