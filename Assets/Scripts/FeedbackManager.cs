@@ -221,6 +221,11 @@ namespace DefaultNamespace
             }
 
             if (!GM.Timer.IsFinished()) return;
+
+            if (!GM.IsBlinkPhaseTwoHidden)
+            {
+                GM.RewardPoint.Window.StartBlinking(GM.BlinkFrequency, GM.BlinkColor);
+            }
             
             GM.InputReceived = false;
             GM.ExperimentPhase = ExperimentPhase.Wait;

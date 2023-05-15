@@ -44,8 +44,12 @@ namespace DefaultNamespace
         public bool FirstTrialSucceeded { get; set; }
         public bool TrialSucceeded { get; set; }
         public bool RepeatTrial { get; set; }
-        public bool InTwoPhaseBlink { get; set; }
-        public float TwoPhaseBlinkWait { get; set; }
+        public bool InTwoPhaseBlink { get; private set; }
+        public bool IsBlinkStatic { get; private set; }
+        public bool IsBlinkPhaseTwoHidden { get; private set; }
+        public float TwoPhaseBlinkWait { get; private set; }
+        public float BlinkFrequency { get; private set; }
+        public float[] BlinkColor { get; private set; }
         public bool DivsActive { get; private set; }
         private bool _isSimilarToPrevious;
         
@@ -85,6 +89,8 @@ namespace DefaultNamespace
         public FeedbackObject Cue { get; private set; }
         public AudioSource AudioSource { get; private set; }
         public Color DivColor { get; private set; }
+
+        public SpawnPoint RewardPoint { get; set; }
         
         private XElement _experimentConfig;
         private string _configContent;
@@ -183,6 +189,8 @@ namespace DefaultNamespace
             InTwoPhaseBlink = false;
             TwoPhaseBlinkWait = 0;
             InitialRewardsCount = 0;
+            IsBlinkStatic = false;
+            IsBlinkPhaseTwoHidden = false;
         }
 
         private void Update()
@@ -270,6 +278,8 @@ namespace DefaultNamespace
             InitialRewardsCount = 0;
             InTwoPhaseBlink = false;
             TwoPhaseBlinkWait = 0;
+            IsBlinkStatic = false;
+            IsBlinkPhaseTwoHidden = false;
         }
 
         public void ClearGameObjects()
@@ -280,14 +290,12 @@ namespace DefaultNamespace
                 Destroy(go.gameObject);
             }
 
-            var windowsInScene = FindObjectsOfType<WindowController>();
-            foreach (var w in windowsInScene)
+            if (RewardPoint == null) return;
+
+            RewardPoint.Window.StopBlinking();
+            if (IsBlinkPhaseTwoHidden && InTwoPhaseBlink && !F.IsBlinkPhaseOneReward)
             {
-                w.StopBlinking();
-                if (InTwoPhaseBlink && !F.IsBlinkPhaseOneReward && w.Type.Equals(ObjectType.Reward))
-                {
-                    StartCoroutine(w.BlinkOnce());
-                }
+                StartCoroutine(RewardPoint.Window.BlinkOnce());
             }
         }
 
@@ -303,9 +311,7 @@ namespace DefaultNamespace
             menuCanvas.SetActive(false);
             _gameCanvas.SetActive(true);
             
-            foreach (var divider in
-                     _gameCanvas.GetComponentsInChildren<Image>().ToList().FindAll
-                         (x => x.GetComponent<WindowController>() is null))
+            foreach (var divider in dividers)
             {
                 divider.color = DivColor;
             }
@@ -930,23 +936,25 @@ namespace DefaultNamespace
             {
                 InTwoPhaseBlink = bool.Parse(element.Attribute("two-phase")!.Value);
                 TwoPhaseBlinkWait = float.Parse(element.Attribute("wait-between")!.Value);
+                IsBlinkStatic = bool.Parse(element.Attribute("static")!.Value);
+                IsBlinkPhaseTwoHidden = bool.Parse(element.Attribute("phase-two-hidden")!.Value);
             }
             catch (Exception e)
             {
                 InTwoPhaseBlink = false;
             }
             
-            var blinkFrequency = float.Parse(element.Attribute("frequency")!.Value);
-            var blinkColor = element.Attribute("color")!.Value.Split(',')
+            BlinkFrequency = float.Parse(element.Attribute("frequency")!.Value);
+            BlinkColor = element.Attribute("color")!.Value.Split(',')
                 .Select(x => float.Parse(x) / 255).ToArray();
             
             // GenerateNewPositions();
             
-            var spawnPoint = SpawnPoints[_uniqueSpawnPositions.Pop()];
+            RewardPoint = SpawnPoints[_uniqueSpawnPositions.Pop()];
             
-            spawnPoint.Window.Type = ObjectType.Reward;
+            RewardPoint.Window.Type = ObjectType.Reward;
 
-            spawnPoint.Window.StartBlinking(blinkFrequency, blinkColor);
+            RewardPoint.Window.StartBlinking(BlinkFrequency, BlinkColor);
         }
         
         

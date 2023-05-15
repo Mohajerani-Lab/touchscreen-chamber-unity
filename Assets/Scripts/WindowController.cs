@@ -13,7 +13,7 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
     public ObjectType Type;
     private GameManager GM;
     private FeedbackManager FM;
-    public Image BgImage;
+    [SerializeField] private Image BgImage;
     
     private bool _isBlinking;
     private long _blinkToggleDuration;
@@ -24,15 +24,17 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
     {
         GM = GameManager.Instance;
         FM = FeedbackManager.Instance;
+        Type = ObjectType.Neutral;
         _isBlinking = false;
-        BgImage = GetComponent<Image>();
+        BgImage.rectTransform.localScale = gameObject.transform.localScale.Invert();
     }
 
     private void Update()
     {
-        if (!_isBlinking)
-            return;
+        if (!_isBlinking) return;
 
+        if (GM.IsBlinkStatic) return;
+        
         var currentTime = Utils.CurrentTimeMillis();
 
         if (currentTime < _blinkToggleTime + _blinkToggleDuration)
@@ -72,7 +74,6 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
         if (GM.NoInputRequired) return;
         if (GM.InputReceived) return;
 
-        
         switch (Type)
         {
             case ObjectType.Reward:
