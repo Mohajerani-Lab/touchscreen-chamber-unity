@@ -26,7 +26,6 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
         FM = FeedbackManager.Instance;
         Type = ObjectType.Neutral;
         _isBlinking = false;
-        BgImage.rectTransform.localScale = gameObject.transform.localScale.Invert();
     }
 
     private void Update()
@@ -43,6 +42,12 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
         _blinkToggleTime = currentTime;
         
         BgImage.color = new Color(BgImage.color.r, BgImage.color.g, BgImage.color.b, 1 - BgImage.color.a);
+    }
+
+    public void UpdateScale(float coef)
+    {
+        gameObject.transform.localScale = new Vector3(coef, coef, coef);
+        BgImage.rectTransform.localScale = gameObject.transform.localScale.Invert();
     }
 
     public void StartBlinking(float frequency, float[] color)

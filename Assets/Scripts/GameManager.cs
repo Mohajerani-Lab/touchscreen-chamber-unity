@@ -605,6 +605,20 @@ namespace DefaultNamespace
                                     _gamePanelRectTransform.offsetMax = new Vector2(5, 10);
                                 }
 
+                                try
+                                {
+                                    var scale = float.Parse(e.Attribute("quadrant-touch-area-scale")!.Value);
+                                    foreach (var w in quadWindows)
+                                    {
+                                        w.UpdateScale(scale);
+                                    }
+                                }
+                                catch (Exception exception)
+                                {
+                                    Console.WriteLine(exception);
+                                    throw;
+                                }
+
                                 break;
                         }
 
