@@ -615,8 +615,7 @@ namespace DefaultNamespace
                                 }
                                 catch (Exception exception)
                                 {
-                                    Console.WriteLine(exception);
-                                    throw;
+                                    // ignored
                                 }
 
                                 break;
@@ -950,18 +949,42 @@ namespace DefaultNamespace
             {
                 InTwoPhaseBlink = bool.Parse(element.Attribute("two-phase")!.Value);
                 TwoPhaseBlinkWait = float.Parse(element.Attribute("wait-between")!.Value);
-                IsBlinkStatic = bool.Parse(element.Attribute("static")!.Value);
                 IsBlinkPhaseTwoHidden = bool.Parse(element.Attribute("phase-two-hidden")!.Value);
             }
             catch (Exception e)
             {
                 InTwoPhaseBlink = false;
             }
-            
-            BlinkFrequency = float.Parse(element.Attribute("frequency")!.Value);
-            BlinkColor = element.Attribute("color")!.Value.Split(',')
-                .Select(x => float.Parse(x) / 255).ToArray();
-            
+
+            try
+            {
+                IsBlinkStatic = bool.Parse(element.Attribute("static")!.Value);
+            }
+            catch (Exception e)
+            {
+                IsBlinkStatic = false;
+            }
+
+            try
+            {
+                BlinkFrequency = float.Parse(element.Attribute("frequency")!.Value);
+            }
+            catch (Exception e)
+            {
+                BlinkFrequency = 1f;
+            }
+
+            try
+            {
+                BlinkColor = element.Attribute("color")!.Value.Split(',')
+                    .Select(x => float.Parse(x) / 255).ToArray();
+            }
+            catch (Exception e)
+            {
+                BlinkColor = new float[] {1f, 1f, 1f};
+            }
+
+
             // GenerateNewPositions();
             
             RewardPoint = SpawnPoints[_uniqueSpawnPositions.Pop()];
