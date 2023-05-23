@@ -82,7 +82,7 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
         switch (Type)
         {
             case ObjectType.Reward:
-                if (GM.SectionCount == 2) break;
+                if (GM.SectionCount == 2 && GM.ExperimentType != "location") break;
                 // GM.experimentStarted = true;
                 if (GM.InTwoPhaseBlink)
                 {
@@ -91,7 +91,7 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
                 GM.ExperimentPhase = ExperimentPhase.Reward;
                 break;
             case ObjectType.Punish:
-                if (GM.SectionCount == 2) break;
+                if (GM.SectionCount == 2 && GM.ExperimentType != "location") break;
                 // GM.experimentStarted = true;
                 GM.ExperimentPhase = ExperimentPhase.Punish;
                 break;

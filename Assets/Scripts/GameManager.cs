@@ -51,12 +51,14 @@ namespace DefaultNamespace
         public float BlinkFrequency { get; private set; }
         public float[] BlinkColor { get; private set; }
         public bool DivsActive { get; private set; }
+        public bool RewardHasFixedPlace { get; private set; }
         private bool _isSimilarToPrevious;
         
         public bool AllowVStack { get; private set; }
 
 
         public int SectionCount { get; private set; }
+        public int RewardPlaceIdx { get; private set; }
         public int InitialRewardsCount { get; private set; }
         private int[] _lastUniqueSpawnPositions;
         private int _similarToPreviousCnt;
@@ -191,6 +193,8 @@ namespace DefaultNamespace
             InitialRewardsCount = 0;
             IsBlinkStatic = false;
             IsBlinkPhaseTwoHidden = false;
+            RewardHasFixedPlace = false;
+            RewardPlaceIdx = 0;
         }
 
         private void Update()
@@ -280,6 +284,8 @@ namespace DefaultNamespace
             TwoPhaseBlinkWait = 0;
             IsBlinkStatic = false;
             IsBlinkPhaseTwoHidden = false;
+            RewardHasFixedPlace = false;
+            RewardPlaceIdx = 0;
         }
 
         public void ClearGameObjects()
@@ -326,6 +332,12 @@ namespace DefaultNamespace
                 e => e.Name.ToString().Equals("function") &&
                      e.Attribute("id")!.Value == "rewarded").ToArray();
             
+            var prepFunc = _experimentConfig.Elements().Where(
+                e => e.Name.ToString().Equals("function") &&
+                     e.Attribute("id")!.Value == "prepare").ToArray();
+            
+            PrepareScene(prepFunc[0]);
+            
             if (rewardCfg.Length > 0)
             {
                 SetupReward(rewardCfg[0]);
@@ -355,13 +367,7 @@ namespace DefaultNamespace
                      e.Attribute("id")!.Value == "trial").ToArray();
 
             TrialData = trialCfg[0];
-            
-            var prepFunc = _experimentConfig.Elements().Where(
-                e => e.Name.ToString().Equals("function") &&
-                     e.Attribute("id")!.Value == "prepare").ToArray();
-            
-            PrepareScene(prepFunc[0]);
-            
+
             SetupCanvas();
             
             var mainFunc = _experimentConfig.Elements().Where(
@@ -416,12 +422,29 @@ namespace DefaultNamespace
             var tone = Utils.FindElementByName(element, "tone");
             var valve = Utils.FindElementByName(element, "valve");
             var timer = Utils.FindElementByName(element, "timer");
-            
+
             var noteString = note.Attribute("text")!.Value;
             var toneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
             var toneDuration = float.Parse(tone.Attribute("duration")!.Value);
             var waitDuration = float.Parse(timer.Attribute("duration")!.Value);
             var valveOpenDuration = float.Parse(valve.Attribute("duration")!.Value);
+
+            try
+            {
+                var options = Utils.FindElementByName(element, "options");
+                var rewardSide = options.Attribute("side")!.Value;
+                RewardHasFixedPlace = true;
+                RewardPlaceIdx = rewardSide switch
+                {
+                    "left" => 0,
+                    "right" => 1,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+            }
+            catch (Exception e)
+            {
+                // ignored
+            }
             
             var position = 0;
             var freq  = 44100;
@@ -868,14 +891,16 @@ namespace DefaultNamespace
 
                 break;
             }
+
+            if (!RewardHasFixedPlace) return;
             
+            RewardPoint = SpawnPoints[RewardPlaceIdx];
+            RewardPoint.Window.Type = ObjectType.Reward;
         }
         
         public void HandleObject(XElement element)
         {
             // GenerateNewPositions();
-            
-            var eId = element.Attribute("id")?.Value;
             
             var objectName = element.Attribute("bundle")?.Value.Split('/').ToList().Last();
             
@@ -930,6 +955,9 @@ namespace DefaultNamespace
             go.transform.Translate(spawnPoint.Pos + offsetVec);
             go.transform.rotation = rotationVec;
 
+            if (RewardHasFixedPlace) return;
+            
+            var eId = element.Attribute("id")?.Value;
 
             var type = eId switch
             {
@@ -940,6 +968,7 @@ namespace DefaultNamespace
 
             spawnPoint.Window.Type = type;
             go.GetComponent<ObjectController>().Type = type;
+            
         }
 
 
@@ -984,13 +1013,13 @@ namespace DefaultNamespace
                 BlinkColor = new float[] {1f, 1f, 1f};
             }
 
-
             // GenerateNewPositions();
+            if (!RewardHasFixedPlace)
+            {
+                RewardPoint = SpawnPoints[_uniqueSpawnPositions.Pop()];
+                RewardPoint.Window.Type = ObjectType.Reward; 
+            }
             
-            RewardPoint = SpawnPoints[_uniqueSpawnPositions.Pop()];
-            
-            RewardPoint.Window.Type = ObjectType.Reward;
-
             RewardPoint.Window.StartBlinking(BlinkFrequency, BlinkColor);
         }
         

@@ -26,8 +26,9 @@ public class InputManager : MonoBehaviour
     private void CheckClick()
     {
         if (!Input.GetMouseButtonDown(0)) return;
+        if (GM.RewardHasFixedPlace) return;
         if (!Physics.Raycast(GM.MainCamera.ScreenPointToRay(Input.mousePosition), out var raycastHitInfo)) return;
-
+        
         var goType = raycastHitInfo.collider.gameObject.GetComponentInParent<ObjectController>().Type;
 
         // GM.experimentStarted = true;
