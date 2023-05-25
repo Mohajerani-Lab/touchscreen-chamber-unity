@@ -50,6 +50,15 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
         BgImage.rectTransform.localScale = gameObject.transform.localScale.Invert();
     }
 
+    public void UpdateBgImageSize(Vector2 minPose, Vector2 maxPose)
+    {
+        BgImage.rectTransform.anchorMin = minPose;
+        BgImage.rectTransform.anchorMax = maxPose;
+
+        BgImage.rectTransform.offsetMin = Vector2.zero;
+        BgImage.rectTransform.offsetMax = Vector2.zero;
+    }
+
     public void StartBlinking(float frequency, float[] color)
     {
         _blinkToggleDuration = (long) (1 / frequency * 1000);

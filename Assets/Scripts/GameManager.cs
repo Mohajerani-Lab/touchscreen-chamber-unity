@@ -81,8 +81,8 @@ namespace DefaultNamespace
         [SerializeField] public GameObject feedbackCanvas;
         [SerializeField] private Shader bundleShader;
         [SerializeField] public List<GameObject> prefabs;
-        [SerializeField] private WindowController[] dualWindows;
-        [SerializeField] private WindowController[] quadWindows;
+        [SerializeField] private List<WindowController> dualWindows;
+        [SerializeField] private List<WindowController> quadWindows;
         [SerializeField] private WindowController[] quadRowWindows;
         [SerializeField] private Image[] dividers;
         
@@ -584,6 +584,26 @@ namespace DefaultNamespace
                             case 2:
                                 _gameCanvas = dualGameCanvas;
                                 _gamePanelRectTransform = _dualPanelRectTransform;
+                                
+                                
+                                try
+                                {
+                                    var top = float.Parse(e.Attribute("top")!.Value);
+                                    var bottom = float.Parse(e.Attribute("bottom")!.Value);
+                                    var left = float.Parse(e.Attribute("left")!.Value);
+                                    var right = float.Parse(e.Attribute("right")!.Value);
+                                    
+                                    var minPos = new Vector2(left, bottom);
+                                    var maxPos = new Vector2(right, top);
+
+                                    dualWindows.ToList().ForEach(w => w.UpdateBgImageSize(minPos, maxPos));
+                                }
+                                catch (Exception exception)
+                                {
+                                    // ignored
+                                }
+                                
+                                
                                 break;
                             case 4:
 
@@ -631,10 +651,7 @@ namespace DefaultNamespace
                                 try
                                 {
                                     var scale = float.Parse(e.Attribute("quadrant-touch-area-scale")!.Value);
-                                    foreach (var w in quadWindows)
-                                    {
-                                        w.UpdateScale(scale);
-                                    }
+                                    quadWindows.ForEach(w => w.UpdateScale(scale));
                                 }
                                 catch (Exception exception)
                                 {
