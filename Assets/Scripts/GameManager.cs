@@ -596,11 +596,11 @@ namespace DefaultNamespace
                                     var minPos = new Vector2(left, bottom);
                                     var maxPos = new Vector2(right, top);
 
-                                    dualWindows.ToList().ForEach(w => w.UpdateBgImageSize(minPos, maxPos));
+                                    dualWindows.ForEach(w => w.UpdateBgImageSize(minPos, maxPos));
                                 }
                                 catch (Exception exception)
                                 {
-                                    // ignored
+                                    dualWindows.ForEach(w => w.UpdateBgImageSize(Vector2.zero, Vector2.one));
                                 }
                                 
                                 
