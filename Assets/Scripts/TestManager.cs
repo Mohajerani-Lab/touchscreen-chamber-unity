@@ -15,6 +15,7 @@ namespace DefaultNamespace
         {
             RootFolder = Application.platform == RuntimePlatform.Android ? "/storage/emulated/0/TouchScreen-Trial-Game" : Application.persistentDataPath;
             _logger = GetComponent<Logger>();
+            Debug.Log(Application.persistentDataPath);
             FillDropDownOptions();
         }
         

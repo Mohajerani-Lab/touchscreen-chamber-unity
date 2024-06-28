@@ -154,7 +154,7 @@ namespace DefaultNamespace
             RootFolder = Application.platform == RuntimePlatform.Android
                 ? "/storage/emulated/0/TouchScreen-Trial-Game"
                 : Application.persistentDataPath;
-            
+            Debug.Log(Application.persistentDataPath);
             if (!Directory.Exists(RootFolder))
             {
                 Debug.Log("Creating data root folder...");
