@@ -205,6 +205,8 @@ namespace DefaultNamespace
                     break;
                 case ExperimentPhase.Setup:
                     ParseConfig(_configContent);
+                    ConnectionHandler.instance.SendIREnable();
+                    ConnectionHandler.instance.SendStartRecording();
                     break;
                 default:
                     CheckDestroyTimer();
@@ -1044,7 +1046,8 @@ namespace DefaultNamespace
         public void SaveAndExit()
         {
             if (!_logger.LogsSaved) _logger.SaveLogsToDisk();
-
+            ConnectionHandler.instance.SendIRDisable();
+            ConnectionHandler.instance.SendStopRecording();
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else

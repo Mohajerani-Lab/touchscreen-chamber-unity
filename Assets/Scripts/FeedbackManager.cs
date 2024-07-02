@@ -76,14 +76,15 @@ namespace DefaultNamespace
             if (!GM.InitialRewardsActive)
             {
                 GM.ExperimentPhase = ExperimentPhase.Trial;
+                ConnectionHandler.instance.SendRewardAndPunishDisable();
                 return;
             };
-            
+
             if (!GM.Timer._started)
             {
                 Debug.Log($"Commencing habituation reward #{++_feedbackIssueCount} from " +
                           $"{GM.InitialRewardsCount}");
-                
+
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
 
                 if (Application.platform.Equals(RuntimePlatform.Android))
@@ -91,6 +92,7 @@ namespace DefaultNamespace
                     if (SC.ArduinoConnected)
                     {
                         SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+                        ConnectionHandler.instance.SendRewardEnable();
                     }
                     else
                     {
@@ -99,19 +101,22 @@ namespace DefaultNamespace
                 }
 
                 Debug.Log(GM.Reward.Note);
-                
+
                 GM.Timer.Begin(GM.Reward.WaitDuration);
             }
-            
+
             if (!GM.Timer.IsFinished()) return;
 
             if (_feedbackIssueCount < GM.InitialRewardsCount) return;
-            
+
             _feedbackIssueCount = 0;
-            
+
             GM.ExperimentPhase = ExperimentPhase.Trial;
+            ConnectionHandler.instance.SendRewardAndPunishDisable();
+
+
         }
-        
+
         public void IssueCue()
         {
             if (!GM.CueActive)
@@ -119,33 +124,34 @@ namespace DefaultNamespace
                 GM.ExperimentPhase = ExperimentPhase.HabituationReward;
                 return;
             }
-            
+
             if (!GM.Timer._started)
             {
                 GM.AudioSource.PlayOneShot(GM.Cue.AudioClip);
-            
+
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
                     if (SC.ArduinoConnected)
                     {
                         SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+                        ConnectionHandler.instance.SendRewardEnable();
                     }
                     else
                     {
                         Debug.Log("Connection to arduino not established.");
                     }
                 }
-            
+
                 Debug.Log(GM.Cue.Note);
 
                 GM.Timer.Begin(GM.Cue.WaitDuration);
             }
 
             if (!GM.Timer.IsFinished()) return;
-            
+
             GM.ExperimentPhase = ExperimentPhase.HabituationReward;
         }
-        
+
         public void IssueReward()
         {
             if (!GM.Timer._started)
@@ -153,7 +159,7 @@ namespace DefaultNamespace
                 GM.InputReceived = true;
                 GM.TrialSucceeded = true;
                 _isFeedbackFirstPhase = true;
-                
+
                 if (GM.RepeatTrial)
                 {
                     GM.RepeatTrial = false;
@@ -165,15 +171,16 @@ namespace DefaultNamespace
                 }
 
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
-            
+
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
                     if (SC.ArduinoConnected)
                     {
 
-                        var coefficient= GM.InTwoPhaseBlink ? 2 : 1;
-                        
+                        var coefficient = GM.InTwoPhaseBlink ? 2 : 1;
+
                         SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration * coefficient}");
+                        ConnectionHandler.instance.SendRewardEnable();
                     }
                     else
                     {
@@ -187,7 +194,7 @@ namespace DefaultNamespace
                 {
                     GM.ClearGameObjects();
                 }
-                
+
                 GM.Timer.Begin(GM.NoInputRequired
                     ? GM.Reward.WaitDuration + GM.NoInputWait
                     : GM.Reward.WaitDuration);
@@ -207,10 +214,11 @@ namespace DefaultNamespace
             T.CurTrialFinished = true;
             if (!GM.FirstTrialSucceeded) GM.FirstTrialSucceeded = true;
             GM.ExperimentPhase = ExperimentPhase.Trial;
+            ConnectionHandler.instance.SendRewardAndPunishDisable();
         }
-        
-        
-        
+
+
+
         public void IssuePhaseOneReward()
         {
             if (!GM.Timer._started)
@@ -226,7 +234,7 @@ namespace DefaultNamespace
             {
                 GM.RewardPoint.Window.StartBlinking(GM.BlinkFrequency, GM.BlinkColor);
             }
-            
+
             GM.InputReceived = false;
             GM.ExperimentPhase = ExperimentPhase.Wait;
         }
@@ -234,22 +242,23 @@ namespace DefaultNamespace
         private void IssueSimpleReward()
         {
             GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
-            
+
             GM.ClearGameObjects();
-            
+
             if (!Application.platform.Equals(RuntimePlatform.Android)) return;
-            
+
             if (SC.ArduinoConnected)
             {
                 SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+                ConnectionHandler.instance.SendRewardEnable();
             }
             else
             {
                 Debug.Log("Connection to arduino not established.");
             }
         }
-        
-        
+
+
 
         public void IssuePunish()
         {
@@ -263,15 +272,15 @@ namespace DefaultNamespace
                 {
                     _punishedCount++;
                 }
-                
+
                 Debug.Log(GM.Punish.Note);
 
                 GM.AudioSource.PlayOneShot(GM.Punish.AudioClip);
-            
+
                 GM.feedbackCanvas.SetActive(true);
-            
+
                 GM.ClearGameObjects();
-                
+
                 GM.Timer.Begin(GM.Punish.WaitDuration);
             }
 
@@ -280,7 +289,7 @@ namespace DefaultNamespace
                 GM.feedbackCanvas.SetActive(false);
                 _isFeedbackFirstPhase = false;
             }
-            
+
             if (!GM.Timer.IsFinished()) return;
 
             T.CurTrialFinished = true;
@@ -290,8 +299,8 @@ namespace DefaultNamespace
                 GM.RepeatTrial = true;
                 Debug.Log("Entered Correction Loop");
             }
-            
             GM.ExperimentPhase = ExperimentPhase.Trial;
+            ConnectionHandler.instance.SendRewardAndPunishDisable();
         }
     }
 }
