@@ -38,6 +38,7 @@ public class ConnectionHandler : MonoBehaviour
                 Connect();
                 yield return new WaitForSeconds(3);
                 connectionTrial++;
+                Time.timeScale = 0;
                 if (connectionTrial > 5) 
                 {
                     Debug.Log("Connection failed. Exiting application.");
@@ -47,6 +48,7 @@ public class ConnectionHandler : MonoBehaviour
             }
             else
             {
+                Time.timeScale = 1;
                 connectionTrial = 0;
             }
 
