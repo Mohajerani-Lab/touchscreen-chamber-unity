@@ -38,6 +38,7 @@ public class ConnectionHandler : MonoBehaviour
                 Connect();
                 yield return new WaitForSeconds(3);
                 connectionTrial++;
+                Debug.Log("Connection trial: " + connectionTrial);
                 Time.timeScale = 0;
                 if (connectionTrial > 5) 
                 {
