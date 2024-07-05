@@ -13,8 +13,11 @@ public class ConnectionHandler : MonoBehaviour
     public string m_TCPAddress = "raspberrypi.local";
     [SerializeField] private TMP_InputField m_AddressInputField;
     [SerializeField] private Logger m_Logger;
+    [SerializeField] private Image m_PauseImage;
     private int connectionTrial = 0;
     private List<IConnection> m_Connections = new List<IConnection>();
+    private bool m_HasConnectedBefore = false;
+
     private void Awake()
     {
         if (instance == null)
@@ -26,35 +29,57 @@ public class ConnectionHandler : MonoBehaviour
             Destroy(gameObject);
         }
         m_Connections.Add(new TCPSocket());
-        Debug.Log(m_Connections[0].GetType());
+        StartCoroutine(CheckConnectionInGame());
     }
-    private IEnumerator Update()
+
+    private IEnumerator CheckConnectionInGame()
     {
-        print("Update");
+        while (true)
+        {
+            yield return new WaitForSeconds(1);
+            if (m_HasConnectedBefore)
+            {
+                CheckConnectionAndHandle();
+            }
+        }
+    }
+
+    private void CheckConnectionAndHandle()
+    {
         if (GameManager.Instance.ExperimentPhase != ExperimentPhase.Preprocess)
         {
             if (!CheckConnection())
             {
-                Connect();
-                yield return new WaitForSeconds(3);
-                connectionTrial++;
-                Debug.Log("Connection trial: " + connectionTrial);
-                Time.timeScale = 0;
-                if (connectionTrial > 5) 
-                {
-                    Debug.Log("Connection failed. Exiting application.");
-                    m_Logger.SaveLogsToDisk();
-                    Application.Quit();
-                }
+                StartCoroutine(AttemptReconnect());
             }
             else
             {
-                Time.timeScale = 1;
-                connectionTrial = 0;
+                ResetConnectionTrial();
             }
-
         }
     }
+
+    private IEnumerator AttemptReconnect()
+    {
+        m_PauseImage.gameObject.SetActive(true);
+        Connect();
+        yield return new WaitForSeconds(3);
+        connectionTrial++;
+        Debug.Log("Connection trial: " + connectionTrial);
+        if (connectionTrial > 5)
+        {
+            Debug.Log("Connection failed. Exiting application.");
+            m_Logger.SaveLogsToDisk();
+            Application.Quit();
+        }
+    }
+
+    private void ResetConnectionTrial()
+    {
+        m_PauseImage.gameObject.SetActive(false);
+        connectionTrial = 0;
+    }
+
     public bool Connect()
     {
         bool connected = false;
@@ -71,6 +96,8 @@ public class ConnectionHandler : MonoBehaviour
                     break;
             }
         }
+        if (m_HasConnectedBefore == false)
+            m_HasConnectedBefore = connected;
         return connected;
     }
     public bool CheckConnection()
@@ -108,32 +135,39 @@ public class ConnectionHandler : MonoBehaviour
     }
     public void SendRewardEnable()
     {
+        if (!CheckConnection()) return;
         Send("reward_enable");
     }
 
     public void SendPunishEnable()
     {
+        if (!CheckConnection()) return;
         Send("punish_enable");
     }
 
     public void SendRewardAndPunishDisable()
     {
+        if (!CheckConnection()) return;
         Send("reward_and_punish_disable");
     }
     public void SendIREnable()
     {
+        if (!CheckConnection()) return;
         Send("ir_enable");
     }
     public void SendIRDisable()
     {
+        if (!CheckConnection()) return;
         Send("ir_disable");
     }
     public void SendStartRecording()
     {
+        if (!CheckConnection()) return;
         Send("start_recording");
     }
     public void SendStopRecording()
     {
+        if (!CheckConnection()) return;
         Send("stop_recording");
     }
 
