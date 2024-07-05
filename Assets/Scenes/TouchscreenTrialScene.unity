@@ -3335,7 +3335,6 @@ GameObject:
   - component: {fileID: 901032669}
   - component: {fileID: 901032668}
   - component: {fileID: 901032670}
-  - component: {fileID: 901032672}
   - component: {fileID: 901032671}
   - component: {fileID: 901032667}
   - component: {fileID: 901032673}
@@ -3452,18 +3451,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8201b268d5394191aa3afb89c8b6d1ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &901032672
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 901032666}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3d941ee5d39b4d0aa8daee4832869ad9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &901032673
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3507,7 +3494,6 @@ MonoBehaviour:
   m_AddressInputField: {fileID: 939651832}
   m_Logger: {fileID: 901032670}
   m_PauseImage: {fileID: 87367920}
-  m_HasConnectedBefore: 1
 --- !u!1 &906245468
 GameObject:
   m_ObjectHideFlags: 0

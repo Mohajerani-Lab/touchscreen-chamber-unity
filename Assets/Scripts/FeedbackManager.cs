@@ -9,7 +9,6 @@ namespace DefaultNamespace
         public static FeedbackManager Instance;
         public bool IsBlinkPhaseOneReward;
         private GameManager GM;
-        private SerialComs SC;
         private TrialManager T;
         private bool _isFeedbackFirstPhase;
         private int _feedbackIssueCount;
@@ -31,7 +30,6 @@ namespace DefaultNamespace
         private void Start()
         {
             GM = GameManager.Instance;
-            SC = SerialComs.Instance;
             T = TrialManager.Instance;
             InitialSetup();
         }

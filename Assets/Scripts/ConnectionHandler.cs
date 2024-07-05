@@ -118,7 +118,7 @@ public class ConnectionHandler : MonoBehaviour
 
     private void Send(string message)
     {
-        print("Sending message: " + message);
+        Debug.Log("Sending message: " + message + " at time: " + Time.time);
         foreach (var connection in m_Connections)
         {
             switch (connection)
