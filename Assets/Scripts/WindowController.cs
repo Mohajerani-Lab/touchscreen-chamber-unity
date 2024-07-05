@@ -103,11 +103,13 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
                 if (GM.SectionCount == 2 && GM.ExperimentType != "location") break;
                 // GM.experimentStarted = true;
                 GM.ExperimentPhase = ExperimentPhase.Punish;
+                ConnectionHandler.instance.SendPunishEnable();
                 break;
             case ObjectType.Neutral:
                 if (!GM.PunishOnEmpty) break;
                 // GM.experimentStarted = true;
                 GM.ExperimentPhase = ExperimentPhase.Punish;
+                ConnectionHandler.instance.SendPunishEnable();
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

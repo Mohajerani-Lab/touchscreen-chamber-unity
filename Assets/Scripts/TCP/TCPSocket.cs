@@ -21,20 +21,21 @@ public class TCPSocket : IConnection
         _client = new TcpClient();
         try
         {
-            _client.Connect(adress, 80);
+            _client.Connect(adress, 65432);
             _stream = _client.GetStream();
             return true;
         }
         catch (System.Exception e)
         {
-            Debug.LogError(e.Message);
+            Debug.Log(e.Message);
             return false;
         }
     }
 
-
     public bool CheckConnection()
     {
+        if (_client == null)
+            return false;
         return _client.Connected;
     }
 

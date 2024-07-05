@@ -86,18 +86,19 @@ namespace DefaultNamespace
                           $"{GM.InitialRewardsCount}");
 
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
-
+                ConnectionHandler.instance.SendRewardEnable();
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
-                    if (SC.ArduinoConnected)
-                    {
-                        SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
-                        ConnectionHandler.instance.SendRewardEnable();
-                    }
-                    else
-                    {
-                        Debug.Log("Connection to arduino not established.");
-                    }
+
+                    // if (SC.ArduinoConnected)
+                    // {
+                    //     SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+                    //     ConnectionHandler.instance.SendRewardEnable();
+                    // }
+                    // else
+                    // {
+                    //     Debug.Log("Connection to arduino not established.");
+                    // }
                 }
 
                 Debug.Log(GM.Reward.Note);
@@ -128,18 +129,19 @@ namespace DefaultNamespace
             if (!GM.Timer._started)
             {
                 GM.AudioSource.PlayOneShot(GM.Cue.AudioClip);
+                ConnectionHandler.instance.SendRewardEnable();
 
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
-                    if (SC.ArduinoConnected)
-                    {
-                        SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
-                        ConnectionHandler.instance.SendRewardEnable();
-                    }
-                    else
-                    {
-                        Debug.Log("Connection to arduino not established.");
-                    }
+                    // if (SC.ArduinoConnected)
+                    // {
+                    //     SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+                    //     ConnectionHandler.instance.SendRewardEnable();
+                    // }
+                    // else
+                    // {
+                    //     Debug.Log("Connection to arduino not established.");
+                    // }
                 }
 
                 Debug.Log(GM.Cue.Note);
@@ -171,21 +173,22 @@ namespace DefaultNamespace
                 }
 
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
+                ConnectionHandler.instance.SendRewardEnable();
 
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
-                    if (SC.ArduinoConnected)
-                    {
+                    // if (SC.ArduinoConnected)
+                    // {
 
-                        var coefficient = GM.InTwoPhaseBlink ? 2 : 1;
+                    //     var coefficient = GM.InTwoPhaseBlink ? 2 : 1;
 
-                        SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration * coefficient}");
-                        ConnectionHandler.instance.SendRewardEnable();
-                    }
-                    else
-                    {
-                        Debug.Log("Connection to arduino not established.");
-                    }
+                    //     SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration * coefficient}");
+                    //     ConnectionHandler.instance.SendRewardEnable();
+                    // }
+                    // else
+                    // {
+                    //     Debug.Log("Connection to arduino not established.");
+                    // }
                 }
 
                 Debug.Log(GM.Reward.Note);
@@ -245,17 +248,17 @@ namespace DefaultNamespace
 
             GM.ClearGameObjects();
 
+            ConnectionHandler.instance.SendRewardEnable();
             if (!Application.platform.Equals(RuntimePlatform.Android)) return;
-
-            if (SC.ArduinoConnected)
-            {
-                SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
-                ConnectionHandler.instance.SendRewardEnable();
-            }
-            else
-            {
-                Debug.Log("Connection to arduino not established.");
-            }
+            // if (SC.ArduinoConnected)
+            // {
+            //     SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+            //     ConnectionHandler.instance.SendRewardEnable();
+            // }
+            // else
+            // {
+            //     Debug.Log("Connection to arduino not established.");
+            // }
         }
 
 

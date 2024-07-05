@@ -5,6 +5,7 @@ using System.Linq;
 using DefaultNamespace;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Logger : MonoBehaviour
 {

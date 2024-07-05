@@ -40,10 +40,12 @@ public class InputManager : MonoBehaviour
                 break;
             case ObjectType.Punish:
                 GM.ExperimentPhase = ExperimentPhase.Punish;
+                ConnectionHandler.instance.SendPunishEnable();
                 break;
             case ObjectType.Neutral:
                 if (!GM.PunishOnEmpty) break;
                 GM.ExperimentPhase = ExperimentPhase.Punish;
+                ConnectionHandler.instance.SendPunishEnable();
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
