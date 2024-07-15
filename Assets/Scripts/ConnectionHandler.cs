@@ -118,13 +118,13 @@ public class ConnectionHandler : MonoBehaviour
 
     private void Send(string message)
     {
-        Debug.Log("Sending message: " + message + " at time: " + System.DateTime.Now);
         foreach (var connection in m_Connections)
         {
             switch (connection)
             {
                 case TCPSocket tcpConnection:
                     tcpConnection.Send(message);
+                    print("Sending message: " + message + " at time: " + System.DateTime.Now);
 
                     break;
                 default:
