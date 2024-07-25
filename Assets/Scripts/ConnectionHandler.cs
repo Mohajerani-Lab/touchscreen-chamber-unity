@@ -118,13 +118,13 @@ public class ConnectionHandler : MonoBehaviour
 
     private void Send(string message)
     {
+//        print("Sending message: " + message + " at time: " + System.DateTime.Now);
         foreach (var connection in m_Connections)
         {
             switch (connection)
             {
                 case TCPSocket tcpConnection:
                     tcpConnection.Send(message);
-                    print("Sending message: " + message + " at time: " + System.DateTime.Now);
 
                     break;
                 default:
@@ -135,30 +135,34 @@ public class ConnectionHandler : MonoBehaviour
     }
     public void SendRewardEnable()
     {
+        //print("reward_enable");
         if (!CheckConnection()) return;
         Send("reward_enable");
     }
 
     public void SendPunishEnable()
     {
+       // print("punish_enable");
+
         if (!CheckConnection()) return;
         Send("punish_enable");
     }
 
     public void SendRewardAndPunishDisable()
     {
+//        print("reward_and_punish_disable");
         if (!CheckConnection()) return;
         Send("reward_and_punish_disable");
     }
     public void SendIREnable()
     {
         if (!CheckConnection()) return;
-        Send("ir_enable");
+        // Send("ir_enable");
     }
     public void SendIRDisable()
     {
         if (!CheckConnection()) return;
-        Send("ir_disable");
+       // Send("ir_disable");
     }
     public void SendStartRecording()
     {

@@ -52,7 +52,9 @@ namespace DefaultNamespace
             {
                 Debug.Log($"Total Rewarded: {FM._rewardedCount}");
                 Debug.Log($"Total Punished: {FM._punishedCount}");
+                ConnectionHandler.instance.SendStopRecording();
                 _logger.SaveLogsToDisk();
+                _logger.ClearLogObjects();
                 GM.ExperimentPhase = ExperimentPhase.Preprocess;
                 return;
             }

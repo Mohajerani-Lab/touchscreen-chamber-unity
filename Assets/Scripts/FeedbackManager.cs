@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -85,6 +87,11 @@ namespace DefaultNamespace
 
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
                 ConnectionHandler.instance.SendRewardEnable();
+                print(GM.NoInputRequired);
+                if(GM.NoInputRequired)
+                {
+                    StartCoroutine(DisableRewardAndPunish());
+                }
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
 
@@ -111,11 +118,16 @@ namespace DefaultNamespace
             _feedbackIssueCount = 0;
 
             GM.ExperimentPhase = ExperimentPhase.Trial;
-            ConnectionHandler.instance.SendRewardAndPunishDisable();
+            if(!GM.NoInputRequired)
+                ConnectionHandler.instance.SendRewardAndPunishDisable();
 
 
         }
-
+        public IEnumerator DisableRewardAndPunish()
+        {
+            yield return new WaitForSeconds(3);
+            ConnectionHandler.instance.SendRewardAndPunishDisable();
+        }
         public void IssueCue()
         {
             if (!GM.CueActive)
@@ -172,7 +184,10 @@ namespace DefaultNamespace
 
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
                 ConnectionHandler.instance.SendRewardEnable();
-
+                if(GM.NoInputRequired)
+                {
+                    StartCoroutine(DisableRewardAndPunish());
+                }
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
                     // if (SC.ArduinoConnected)
@@ -215,7 +230,8 @@ namespace DefaultNamespace
             T.CurTrialFinished = true;
             if (!GM.FirstTrialSucceeded) GM.FirstTrialSucceeded = true;
             GM.ExperimentPhase = ExperimentPhase.Trial;
-            ConnectionHandler.instance.SendRewardAndPunishDisable();
+            if(!GM.NoInputRequired)
+                ConnectionHandler.instance.SendRewardAndPunishDisable();
         }
 
 

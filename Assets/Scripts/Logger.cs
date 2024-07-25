@@ -46,8 +46,8 @@ public class Logger : MonoBehaviour
     {
         GM = GameManager.Instance;
         LogsSaved = false;
-        _sessionName = "Touchscreen-Trial-Game-" + DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
-        Debug.Log($"Logger initialized. Session Name: {_sessionName}");
+        Debug.Log($"Logger initialized.");
+
     }
 
     private void OnEnable()
@@ -78,7 +78,10 @@ public class Logger : MonoBehaviour
         _logMsgsTemp = "";
         logDisplay.text = _logMsgsTemp;
     }
-
+    public void ClearLogObjects()
+    {
+        _logObjects.Clear();
+    }
     public void SaveLogsToDisk()
     {
         _reportDirectory = Path.Combine(GM.RootFolder, "Reports");
@@ -89,7 +92,7 @@ public class Logger : MonoBehaviour
         }
 
         Debug.Log("Saving logs...");
-        
+        _sessionName = "Touchscreen-Trial-Game-" + GM.StartTime.ToString("yyyy-MM-dd-HH-mm-ss");
         var writer = new StreamWriter( $"{Path.Combine(_reportDirectory, _sessionName)}.csv");
         writer.Write(string.Join('\n', _logObjects.Select(s => s.ToCsv())));
         writer.Close();

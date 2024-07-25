@@ -66,6 +66,8 @@ namespace DefaultNamespace
         public string NoInputAction { get; private set; }
         public string RootFolder { get; private set; }
 
+        public DateTime StartTime { get; private set; }
+
         [SerializeField] private TextMeshProUGUI xmlContentDisplay;
         [SerializeField] public GameObject menuCanvas;
         [SerializeField] private GameObject dualGameCanvas;
@@ -118,7 +120,7 @@ namespace DefaultNamespace
         // New vars
         public static GameManager Instance { get; private set; }
         private TrialManager T;
-        private FeedbackManager F;
+        private FeedbackManager FM;
         private Timer DestroyTimer;
         public Timer Timer { get; private set; }
         public Timer ExperimentTimer { get; private set; }
@@ -150,7 +152,7 @@ namespace DefaultNamespace
         private void Start()
         {
             T = TrialManager.Instance;
-            F = FeedbackManager.Instance;
+            FM = FeedbackManager.Instance;
 
             ExperimentPhase = ExperimentPhase.Preprocess;
 
@@ -206,8 +208,9 @@ namespace DefaultNamespace
                     break;
                 case ExperimentPhase.Setup:
                     ParseConfig(_configContent);
-                    ConnectionHandler.instance?.SendIREnable();
+                    StartTime=DateTime.Now;
                     ConnectionHandler.instance?.SendStartRecording();
+                    ConnectionHandler.instance?.SendIREnable();
                     break;
                 default:
                     CheckDestroyTimer();
@@ -280,7 +283,7 @@ namespace DefaultNamespace
             quadRowGameCanvas.SetActive(false);
 
             T.InitialSetup();
-            F.InitialSetup();
+            FM.InitialSetup();
 
             DestroyTimer.Clear();
             Timer.Clear();
@@ -311,7 +314,7 @@ namespace DefaultNamespace
             if (RewardPoint == null) return;
 
             RewardPoint.Window.StopBlinking();
-            if (IsBlinkPhaseTwoHidden && InTwoPhaseBlink && !F.IsBlinkPhaseOneReward)
+            if (IsBlinkPhaseTwoHidden && InTwoPhaseBlink && !FM.IsBlinkPhaseOneReward)
             {
                 StartCoroutine(RewardPoint.Window.BlinkOnce());
             }
@@ -321,6 +324,7 @@ namespace DefaultNamespace
         {
             ClearGameObjects();
             ClearScene();
+            _logger.ClearLogDisplay();
             ExperimentPhase = ExperimentPhase.Setup;
         }
 
@@ -435,7 +439,9 @@ namespace DefaultNamespace
             var valve = Utils.FindElementByName(element, "valve");
             var timer = Utils.FindElementByName(element, "timer");
 
+
             var noteString = note.Attribute("text")!.Value;
+            print(noteString);
             var toneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
             var toneDuration = float.Parse(tone.Attribute("duration")!.Value);
             var waitDuration = float.Parse(timer.Attribute("duration")!.Value);
@@ -790,6 +796,7 @@ namespace DefaultNamespace
             if (!DestroyTimer.IsFinished()) return;
 
             Debug.Log("Termination time passed, saving experiment results");
+            ConnectionHandler.instance.SendStopRecording();
             _logger.SaveLogsToDisk();
 
             ClearGameObjects();
@@ -1055,7 +1062,13 @@ namespace DefaultNamespace
 
         public void SaveAndExit()
         {
-            if (!_logger.LogsSaved) _logger.SaveLogsToDisk();
+
+            if (!_logger.LogsSaved)
+            {
+                Debug.Log($"Total Rewarded: {FM._rewardedCount}");
+                Debug.Log($"Total Punished: {FM._punishedCount}");
+                _logger.SaveLogsToDisk();
+            }
             ConnectionHandler.instance.SendIRDisable();
             ConnectionHandler.instance.SendStopRecording();
 #if UNITY_EDITOR
