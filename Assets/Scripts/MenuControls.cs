@@ -83,7 +83,7 @@ namespace DefaultNamespace
             
             if (_fingerDown.y - _fingerUp.y > swipeThreshold)
             {
-                GM.menuCanvas.SetActive(!GM.menuCanvas.activeSelf);
+                //GM.menuCanvas.SetActive(!GM.menuCanvas.activeSelf);
                 _fingerUp = _fingerDown;
             }
 

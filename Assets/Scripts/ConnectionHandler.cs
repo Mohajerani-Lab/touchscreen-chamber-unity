@@ -66,11 +66,11 @@ public class ConnectionHandler : MonoBehaviour
         yield return new WaitForSeconds(3);
         connectionTrial++;
         Debug.Log("Connection trial: " + connectionTrial);
-        if (connectionTrial > 5)
+        if (connectionTrial == 5)
         {
-            Debug.Log("Connection failed. Exiting application.");
+            Debug.Log("Connection failed. Saving Logs.");
+            
             m_Logger.SaveLogsToDisk();
-            Application.Quit();
         }
     }
 
@@ -140,7 +140,7 @@ public class ConnectionHandler : MonoBehaviour
         Send("reward_enable");
     }
 
-    public void SendPunishEnable()
+    public void SendTimeOutEnable()
     {
        // print("punish_enable");
 
@@ -148,7 +148,7 @@ public class ConnectionHandler : MonoBehaviour
         Send("punish_enable");
     }
 
-    public void SendRewardAndPunishDisable()
+    public void SendRewardAndTimeOutDisable()
     {
 //        print("reward_and_punish_disable");
         if (!CheckConnection()) return;

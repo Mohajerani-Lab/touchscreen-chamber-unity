@@ -15,7 +15,7 @@ namespace DefaultNamespace
         private bool _isFeedbackFirstPhase;
         private int _feedbackIssueCount;
         public int _rewardedCount;
-        public int _punishedCount;
+        public int _TimeOutCount;
 
         private void Awake()
         {
@@ -40,7 +40,7 @@ namespace DefaultNamespace
         {
             _feedbackIssueCount = 0;
             _rewardedCount = 0;
-            _punishedCount = 0;
+            _TimeOutCount = 0;
             IsBlinkPhaseOneReward = false;
             _isFeedbackFirstPhase = true;
         }
@@ -76,7 +76,7 @@ namespace DefaultNamespace
             if (!GM.InitialRewardsActive)
             {
                 GM.ExperimentPhase = ExperimentPhase.Trial;
-                ConnectionHandler.instance.SendRewardAndPunishDisable();
+                ConnectionHandler.instance.SendRewardAndTimeOutDisable();
                 return;
             };
 
@@ -119,14 +119,14 @@ namespace DefaultNamespace
 
             GM.ExperimentPhase = ExperimentPhase.Trial;
             if(!GM.NoInputRequired)
-                ConnectionHandler.instance.SendRewardAndPunishDisable();
+                ConnectionHandler.instance.SendRewardAndTimeOutDisable();
 
 
         }
         public IEnumerator DisableRewardAndPunish()
         {
             yield return new WaitForSeconds(3);
-            ConnectionHandler.instance.SendRewardAndPunishDisable();
+            ConnectionHandler.instance.SendRewardAndTimeOutDisable();
         }
         public void IssueCue()
         {
@@ -231,7 +231,7 @@ namespace DefaultNamespace
             if (!GM.FirstTrialSucceeded) GM.FirstTrialSucceeded = true;
             GM.ExperimentPhase = ExperimentPhase.Trial;
             if(!GM.NoInputRequired)
-                ConnectionHandler.instance.SendRewardAndPunishDisable();
+                ConnectionHandler.instance.SendRewardAndTimeOutDisable();
         }
 
 
@@ -287,7 +287,7 @@ namespace DefaultNamespace
 
                 if (!GM.RepeatTrial)
                 {
-                    _punishedCount++;
+                    _TimeOutCount++;
                 }
 
                 Debug.Log(GM.Punish.Note);
@@ -317,7 +317,7 @@ namespace DefaultNamespace
                 Debug.Log("Entered Correction Loop");
             }
             GM.ExperimentPhase = ExperimentPhase.Trial;
-            ConnectionHandler.instance.SendRewardAndPunishDisable();
+            ConnectionHandler.instance.SendRewardAndTimeOutDisable();
         }
     }
 }

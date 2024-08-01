@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1066,7 +1066,7 @@ namespace DefaultNamespace
             if (!_logger.LogsSaved)
             {
                 Debug.Log($"Total Rewarded: {FM._rewardedCount}");
-                Debug.Log($"Total Punished: {FM._punishedCount}");
+                Debug.Log($"Total Punished: {FM._TimeOutCount}");
                 _logger.SaveLogsToDisk();
             }
             ConnectionHandler.instance.SendIRDisable();

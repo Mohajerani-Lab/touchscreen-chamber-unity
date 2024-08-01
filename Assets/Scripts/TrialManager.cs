@@ -51,7 +51,7 @@ namespace DefaultNamespace
             if (_curTrialNumber >= GM.TrialEvents.Count)
             {
                 Debug.Log($"Total Rewarded: {FM._rewardedCount}");
-                Debug.Log($"Total Punished: {FM._punishedCount}");
+                Debug.Log($"Total Punished: {FM._TimeOutCount}");
                 ConnectionHandler.instance.SendStopRecording();
                 _logger.SaveLogsToDisk();
                 _logger.ClearLogObjects();
