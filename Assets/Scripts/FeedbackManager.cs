@@ -14,7 +14,7 @@ namespace DefaultNamespace
         private TrialManager T;
         private bool _isFeedbackFirstPhase;
         private int _feedbackIssueCount;
-        public int _rewardedCount;
+        public int _rewardCount;
         public int _TimeOutCount;
 
         private void Awake()
@@ -39,7 +39,7 @@ namespace DefaultNamespace
         public void InitialSetup()
         {
             _feedbackIssueCount = 0;
-            _rewardedCount = 0;
+            _rewardCount = 0;
             _TimeOutCount = 0;
             IsBlinkPhaseOneReward = false;
             _isFeedbackFirstPhase = true;
@@ -65,8 +65,8 @@ namespace DefaultNamespace
                         IssueReward();
                     }
                     break;
-                case ExperimentPhase.Punish:
-                    IssuePunish();
+                case ExperimentPhase.Timeout:
+                    IssueTimeOut();
                     break;
             }
         }
@@ -90,7 +90,7 @@ namespace DefaultNamespace
                 print(GM.NoInputRequired);
                 if(GM.NoInputRequired)
                 {
-                    StartCoroutine(DisableRewardAndPunish());
+                    StartCoroutine(DisableRewardAndTimeOut());
                 }
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
@@ -123,7 +123,7 @@ namespace DefaultNamespace
 
 
         }
-        public IEnumerator DisableRewardAndPunish()
+        public IEnumerator DisableRewardAndTimeOut()
         {
             yield return new WaitForSeconds(3);
             ConnectionHandler.instance.SendRewardAndTimeOutDisable();
@@ -179,14 +179,14 @@ namespace DefaultNamespace
                 }
                 else
                 {
-                    _rewardedCount++;
+                    _rewardCount++;
                 }
 
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
                 ConnectionHandler.instance.SendRewardEnable();
                 if(GM.NoInputRequired)
                 {
-                    StartCoroutine(DisableRewardAndPunish());
+                    StartCoroutine(DisableRewardAndTimeOut());
                 }
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
@@ -277,7 +277,7 @@ namespace DefaultNamespace
 
 
 
-        public void IssuePunish()
+        public void IssueTimeOut()
         {
             IsBlinkPhaseOneReward = false;
             if (!GM.Timer._started)
@@ -290,18 +290,18 @@ namespace DefaultNamespace
                     _TimeOutCount++;
                 }
 
-                Debug.Log(GM.Punish.Note);
+                Debug.Log(GM.TimeOut.Note);
 
-                GM.AudioSource.PlayOneShot(GM.Punish.AudioClip);
+                GM.AudioSource.PlayOneShot(GM.TimeOut.AudioClip);
 
                 GM.feedbackCanvas.SetActive(true);
 
                 GM.ClearGameObjects();
 
-                GM.Timer.Begin(GM.Punish.WaitDuration);
+                GM.Timer.Begin(GM.TimeOut.WaitDuration);
             }
 
-            if (_isFeedbackFirstPhase && GM.Timer.TimePassedInSeconds() >= GM.Punish.BackgroundDuration)
+            if (_isFeedbackFirstPhase && GM.Timer.TimePassedInSeconds() >= GM.TimeOut.BackgroundDuration)
             {
                 GM.feedbackCanvas.SetActive(false);
                 _isFeedbackFirstPhase = false;

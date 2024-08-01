@@ -36,7 +36,7 @@ namespace DefaultNamespace
         public string ExperimentType;
 
         public bool InputReceived { get; set; }
-        public bool PunishOnEmpty { get; private set; }
+        public bool TimeOutOnEmpty { get; private set; }
         public bool CueActive { get; private set; }
         public bool NoInputRequired { get; private set; }
         public bool InitialRewardsActive { get; private set; }
@@ -126,7 +126,7 @@ namespace DefaultNamespace
         public Timer ExperimentTimer { get; private set; }
         public ExperimentPhase ExperimentPhase;
         public FeedbackObject Reward { get; private set; }
-        public FeedbackObject Punish { get; private set; }
+        public FeedbackObject TimeOut { get; private set; }
 
         public List<XElement> TrialEvents { get; private set; }
 
@@ -185,7 +185,7 @@ namespace DefaultNamespace
             ExperimentTimer = new Timer();
             _uniqueSpawnPositions = new Stack<int>();
             _lastUniqueSpawnPositions = new[] { -1, -1, -1, -1 };
-            PunishOnEmpty = true;
+            TimeOutOnEmpty = true;
             InputReceived = false;
             CueActive = false;
             NoInputRequired = false;
@@ -288,7 +288,7 @@ namespace DefaultNamespace
             DestroyTimer.Clear();
             Timer.Clear();
 
-            PunishOnEmpty = true;
+            TimeOutOnEmpty = true;
             InputReceived = false;
             CueActive = false;
             NoInputRequired = false;
@@ -346,7 +346,7 @@ namespace DefaultNamespace
 
             var rewardCfg = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
-                     e.Attribute("id")!.Value == "rewarded").ToArray();
+                     e.Attribute("id")!.Value == "reward").ToArray();
 
             var prepFunc = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
@@ -359,13 +359,13 @@ namespace DefaultNamespace
                 SetupReward(rewardCfg[0]);
             }
 
-            var punishCfg = _experimentConfig.Elements().Where(
+            var TimeOutCfg = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
-                     e.Attribute("id")!.Value == "punished").ToArray();
+                     e.Attribute("id")!.Value == "timeout").ToArray();
 
-            if (punishCfg.Length > 0)
+            if (TimeOutCfg.Length > 0)
             {
-                SetupPunish(punishCfg[0], _experimentConfig);
+                SetupTimeOut(TimeOutCfg[0], _experimentConfig);
             }
 
             var cueCfg = _experimentConfig.Elements().Where(
@@ -526,7 +526,7 @@ namespace DefaultNamespace
             );
         }
 
-        private void SetupPunish(XElement element, XElement cfg)
+        private void SetupTimeOut(XElement element, XElement cfg)
         {
             var tone = Utils.FindElementByName(element, "tone");
             var note = Utils.FindElementByName(element, "note");
@@ -547,7 +547,7 @@ namespace DefaultNamespace
 
             var clipLen = freq * toneDuration;
 
-            var clip = AudioClip.Create("PunishTone", (int)clipLen, 1, freq,
+            var clip = AudioClip.Create("TimeoutTone", (int)clipLen, 1, freq,
                 true,
                 data =>
             {
@@ -560,11 +560,11 @@ namespace DefaultNamespace
                 }
             }, newPosition => position = newPosition);
 
-            Punish = new FeedbackObject(
+            TimeOut = new FeedbackObject(
                 noteString, toneFrequency, toneDuration, waitDuration, clip, backgroundColor, backgroundDuration
                 );
 
-            feedbackCanvas.GetComponentInChildren<Image>().color = Punish.BackgroundColor;
+            feedbackCanvas.GetComponentInChildren<Image>().color = TimeOut.BackgroundColor;
         }
 
         private void PrepareScene(XElement element)
@@ -584,8 +584,8 @@ namespace DefaultNamespace
                     case "correction-loop":
                         CorrectionLoopActive = bool.Parse(e.Attribute("active")!.Value);
                         break;
-                    case "punish-on-empty":
-                        PunishOnEmpty = bool.Parse(e.Attribute("active")!.Value);
+                    case "timeout-on-empty":
+                        TimeOutOnEmpty = bool.Parse(e.Attribute("active")!.Value);
                         break;
                     case "no-input":
                         NoInputRequired = bool.Parse(e.Attribute("active")!.Value);
@@ -997,8 +997,8 @@ namespace DefaultNamespace
 
             var type = eId switch
             {
-                "rewarded" => ObjectType.Reward,
-                "punished" => ObjectType.Punish,
+                "reward" => ObjectType.Reward,
+                "timeout" => ObjectType.Timeout,
                 _ => ObjectType.Neutral
             };
 
@@ -1065,8 +1065,8 @@ namespace DefaultNamespace
 
             if (!_logger.LogsSaved)
             {
-                Debug.Log($"Total Rewarded: {FM._rewardedCount}");
-                Debug.Log($"Total Punished: {FM._TimeOutCount}");
+                Debug.Log($"Total Reward: {FM._rewardCount}");
+                Debug.Log($"Total Time Out: {FM._TimeOutCount}");
                 _logger.SaveLogsToDisk();
             }
             ConnectionHandler.instance.SendIRDisable();

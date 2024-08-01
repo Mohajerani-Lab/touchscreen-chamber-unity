@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace DefaultNamespace
 {
@@ -22,7 +22,7 @@ namespace DefaultNamespace
             ValveOpenDuration = valveOpenDuration;
         }
         
-        // For punish
+        // For TimeOut
         public FeedbackObject(
             string note, 
             int toneFrequency, 

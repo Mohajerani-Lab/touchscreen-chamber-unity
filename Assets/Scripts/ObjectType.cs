@@ -3,7 +3,7 @@
     public enum ObjectType
     {
         Reward,
-        Punish,
+        Timeout,
         Neutral
     }
 }

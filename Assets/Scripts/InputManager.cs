@@ -38,13 +38,13 @@ public class InputManager : MonoBehaviour
             case ObjectType.Reward:
                 GM.ExperimentPhase = ExperimentPhase.Reward;
                 break;
-            case ObjectType.Punish:
-                GM.ExperimentPhase = ExperimentPhase.Punish;
+            case ObjectType.Timeout:
+                GM.ExperimentPhase = ExperimentPhase.Timeout;
                 ConnectionHandler.instance.SendTimeOutEnable();
                 break;
             case ObjectType.Neutral:
-                if (!GM.PunishOnEmpty) break;
-                GM.ExperimentPhase = ExperimentPhase.Punish;
+                if (!GM.TimeOutOnEmpty) break;
+                GM.ExperimentPhase = ExperimentPhase.Timeout;
                 ConnectionHandler.instance.SendTimeOutEnable();
                 break;
             default:

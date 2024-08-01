@@ -99,16 +99,16 @@ public class WindowController : MonoBehaviour, IPointerClickHandler
                 }
                 GM.ExperimentPhase = ExperimentPhase.Reward;
                 break;
-            case ObjectType.Punish:
+            case ObjectType.Timeout:
                 if (GM.SectionCount == 2 && GM.ExperimentType != "location") break;
                 // GM.experimentStarted = true;
-                GM.ExperimentPhase = ExperimentPhase.Punish;
+                GM.ExperimentPhase = ExperimentPhase.Timeout;
                 ConnectionHandler.instance.SendTimeOutEnable();
                 break;
             case ObjectType.Neutral:
-                if (!GM.PunishOnEmpty) break;
+                if (!GM.TimeOutOnEmpty) break;
                 // GM.experimentStarted = true;
-                GM.ExperimentPhase = ExperimentPhase.Punish;
+                GM.ExperimentPhase = ExperimentPhase.Timeout;
                 ConnectionHandler.instance.SendTimeOutEnable();
                 break;
             default:
