@@ -8,7 +8,7 @@
         Trial,
         HabituationReward,
         Reward,
-        Punish,
+        Timeout,
         Wait
     }
 }

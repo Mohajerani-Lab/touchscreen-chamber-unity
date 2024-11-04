@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,16 +27,16 @@ namespace DefaultNamespace
             public Vector3 Pos { get; set; }
             public WindowController Window { get; set; }
         }
-        
+
         public SpawnPoint[] SpawnPoints { get; private set; }
         public Random Rand;
         public Camera MainCamera { get; private set; }
         public TMP_Dropdown configDropdown;
 
         public string ExperimentType;
-        
+
         public bool InputReceived { get; set; }
-        public bool PunishOnEmpty { get; private set; }
+        public bool TimeOutOnEmpty { get; private set; }
         public bool CueActive { get; private set; }
         public bool NoInputRequired { get; private set; }
         public bool InitialRewardsActive { get; private set; }
@@ -53,7 +53,7 @@ namespace DefaultNamespace
         public bool DivsActive { get; private set; }
         public bool RewardHasFixedPlace { get; private set; }
         private bool _isSimilarToPrevious;
-        
+
         public bool AllowVStack { get; private set; }
 
 
@@ -65,7 +65,9 @@ namespace DefaultNamespace
         public float NoInputWait { get; private set; }
         public string NoInputAction { get; private set; }
         public string RootFolder { get; private set; }
-        
+
+        public DateTime StartTime { get; private set; }
+
         [SerializeField] private TextMeshProUGUI xmlContentDisplay;
         [SerializeField] public GameObject menuCanvas;
         [SerializeField] private GameObject dualGameCanvas;
@@ -85,15 +87,15 @@ namespace DefaultNamespace
         [SerializeField] private List<WindowController> quadWindows;
         [SerializeField] private WindowController[] quadRowWindows;
         [SerializeField] private Image[] dividers;
-        
-        
+
+
         public XElement TrialData { get; private set; }
         public FeedbackObject Cue { get; private set; }
         public AudioSource AudioSource { get; private set; }
         public Color DivColor { get; private set; }
 
         public SpawnPoint RewardPoint { get; set; }
-        
+
         private XElement _experimentConfig;
         private string _configContent;
         private GameObject _gameCanvas;
@@ -109,23 +111,23 @@ namespace DefaultNamespace
         private float _scWidthQ;
         private float _scHeightQ;
         private float _scWidthQOffset;
-        
+
         // private Vector2 _quadPanelAnchorMin;
         // private Vector2 _quadPanelAnchorMax;
-        
+
         private Logger _logger;
 
         // New vars
         public static GameManager Instance { get; private set; }
         private TrialManager T;
-        private FeedbackManager F;
+        private FeedbackManager FM;
         private Timer DestroyTimer;
         public Timer Timer { get; private set; }
         public Timer ExperimentTimer { get; private set; }
         public ExperimentPhase ExperimentPhase;
         public FeedbackObject Reward { get; private set; }
-        public FeedbackObject Punish { get; private set; }
-        
+        public FeedbackObject TimeOut { get; private set; }
+
         public List<XElement> TrialEvents { get; private set; }
 
         private Stack<int> _uniqueSpawnPositions;
@@ -142,19 +144,20 @@ namespace DefaultNamespace
             }
 
             Application.targetFrameRate = -1;
+                        RootFolder = Application.platform == RuntimePlatform.Android
+                ? "/storage/emulated/0/TouchScreen-Trial-Game"
+                : Application.persistentDataPath;
         }
 
         private void Start()
         {
             T = TrialManager.Instance;
-            F = FeedbackManager.Instance;
-            
+            FM = FeedbackManager.Instance;
+
             ExperimentPhase = ExperimentPhase.Preprocess;
-            
-            RootFolder = Application.platform == RuntimePlatform.Android
-                ? "/storage/emulated/0/TouchScreen-Trial-Game"
-                : Application.persistentDataPath;
-            
+
+
+            Debug.Log(Application.persistentDataPath);
             if (!Directory.Exists(RootFolder))
             {
                 Debug.Log("Creating data root folder...");
@@ -169,7 +172,7 @@ namespace DefaultNamespace
 
             MainCamera = Camera.main;
             _orthoSize = MainCamera!.orthographicSize * 2;
-            
+
             _dualPanelRectTransform = dualPanel.GetComponent<RectTransform>();
             _quadPanelRectTransform = quadPanel.GetComponent<RectTransform>();
             _quadRowPanelRectTransform = quadRowPanel.GetComponent<RectTransform>();
@@ -182,7 +185,7 @@ namespace DefaultNamespace
             ExperimentTimer = new Timer();
             _uniqueSpawnPositions = new Stack<int>();
             _lastUniqueSpawnPositions = new[] { -1, -1, -1, -1 };
-            PunishOnEmpty = true;
+            TimeOutOnEmpty = true;
             InputReceived = false;
             CueActive = false;
             NoInputRequired = false;
@@ -205,17 +208,20 @@ namespace DefaultNamespace
                     break;
                 case ExperimentPhase.Setup:
                     ParseConfig(_configContent);
+                    StartTime=DateTime.Now;
+                    ConnectionHandler.instance?.SendStartRecording();
+                    ConnectionHandler.instance?.SendIREnable();
                     break;
                 default:
                     CheckDestroyTimer();
                     break;
             }
-            
+
         }
 
         private void FillDropDownOptions()
         {
-            
+
             string[] files;
             try
             {
@@ -237,7 +243,7 @@ namespace DefaultNamespace
                 configDropdown.options.Add(new TMP_Dropdown.OptionData(conf));
             }
         }
-        
+
         public void UpdateXmlContent()
         {
             if (configDropdown.value == 0) return;
@@ -247,10 +253,19 @@ namespace DefaultNamespace
             var xmlContentBody = XmlReader.LoadXmlString(filePath);
             xmlContentDisplay.text = xmlContentTitle + xmlContentBody;
             _configContent = xmlContentBody;
-            
+
             Debug.Log($"Loaded new configuration file: {selectedFile}");
         }
-        
+        public void UpdateXmlContent(string selectedFile)
+        {
+            var filePath = $"{RootFolder}/Data/{selectedFile}";
+            var xmlContentTitle = $"Contents of {selectedFile}:\n\n";
+            var xmlContentBody = XmlReader.LoadXmlString(filePath);
+            xmlContentDisplay.text = xmlContentTitle + xmlContentBody;
+            _configContent = xmlContentBody;
+
+            Debug.Log($"Loaded new configuration file: {selectedFile}");
+        }
         public void ResetSpawnWindows()
         {
             foreach (var spawnPoint in SpawnPoints)
@@ -262,18 +277,18 @@ namespace DefaultNamespace
         private void ClearScene()
         {
             prefabs.Clear();
-                        
+
             dualGameCanvas.SetActive(false);
             quadGameCanvas.SetActive(false);
             quadRowGameCanvas.SetActive(false);
 
             T.InitialSetup();
-            F.InitialSetup();
-            
+            FM.InitialSetup();
+
             DestroyTimer.Clear();
             Timer.Clear();
 
-            PunishOnEmpty = true;
+            TimeOutOnEmpty = true;
             InputReceived = false;
             CueActive = false;
             NoInputRequired = false;
@@ -299,7 +314,7 @@ namespace DefaultNamespace
             if (RewardPoint == null) return;
 
             RewardPoint.Window.StopBlinking();
-            if (IsBlinkPhaseTwoHidden && InTwoPhaseBlink && !F.IsBlinkPhaseOneReward)
+            if (IsBlinkPhaseTwoHidden && InTwoPhaseBlink && !FM.IsBlinkPhaseOneReward)
             {
                 StartCoroutine(RewardPoint.Window.BlinkOnce());
             }
@@ -309,6 +324,7 @@ namespace DefaultNamespace
         {
             ClearGameObjects();
             ClearScene();
+            _logger.ClearLogDisplay();
             ExperimentPhase = ExperimentPhase.Setup;
         }
 
@@ -316,46 +332,46 @@ namespace DefaultNamespace
         {
             menuCanvas.SetActive(false);
             _gameCanvas.SetActive(true);
-            
+
             foreach (var divider in dividers)
             {
                 divider.color = DivColor;
             }
 
         }
-        
+
         private void ParseConfig(string xmlContent)
         {
             _experimentConfig = XElement.Parse(xmlContent);
 
             var rewardCfg = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
-                     e.Attribute("id")!.Value == "rewarded").ToArray();
-            
+                     e.Attribute("id")!.Value == "reward").ToArray();
+
             var prepFunc = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
                      e.Attribute("id")!.Value == "prepare").ToArray();
-            
+
             PrepareScene(prepFunc[0]);
-            
+
             if (rewardCfg.Length > 0)
             {
                 SetupReward(rewardCfg[0]);
             }
-            
-            var punishCfg = _experimentConfig.Elements().Where(
-                e => e.Name.ToString().Equals("function") &&
-                     e.Attribute("id")!.Value == "punished").ToArray();
 
-            if (punishCfg.Length > 0)
+            var TimeOutCfg = _experimentConfig.Elements().Where(
+                e => e.Name.ToString().Equals("function") &&
+                     e.Attribute("id")!.Value == "timeout").ToArray();
+
+            if (TimeOutCfg.Length > 0)
             {
-                SetupPunish(punishCfg[0], _experimentConfig);
+                SetupTimeOut(TimeOutCfg[0], _experimentConfig);
             }
-            
+
             var cueCfg = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
                      e.Attribute("id")!.Value == "cued").ToArray();
-            
+
             if (cueCfg.Length > 0)
             {
                 CueActive = true;
@@ -369,7 +385,7 @@ namespace DefaultNamespace
             TrialData = trialCfg[0];
 
             SetupCanvas();
-            
+
             var mainFunc = _experimentConfig.Elements().Where(
                 e => e.Name.ToString().Equals("function") &&
                      e.Attribute("id")!.Value == "main").ToArray();
@@ -384,16 +400,16 @@ namespace DefaultNamespace
             var collection = Utils.FindElementByName(element, "collection");
             TrialEvents = HandleCollection(collection);
         }
-        
+
         public List<XElement> HandleCollection(XElement element)
         {
 
             var collectionElements = new List<XElement>();
 
             var innerElements = element.Elements().ToArray();
-            
+
             var collectionType = element.Attribute("sample")!.Value;
-            
+
             switch (collectionType)
             {
                 case "sequence":
@@ -415,7 +431,7 @@ namespace DefaultNamespace
             return collectionElements;
 
         }
-        
+
         private void SetupReward(XElement element)
         {
             var note = Utils.FindElementByName(element, "note");
@@ -423,7 +439,9 @@ namespace DefaultNamespace
             var valve = Utils.FindElementByName(element, "valve");
             var timer = Utils.FindElementByName(element, "timer");
 
+
             var noteString = note.Attribute("text")!.Value;
+            print(noteString);
             var toneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
             var toneDuration = float.Parse(tone.Attribute("duration")!.Value);
             var waitDuration = float.Parse(timer.Attribute("duration")!.Value);
@@ -445,20 +463,20 @@ namespace DefaultNamespace
             {
                 // ignored
             }
-            
+
             var position = 0;
-            var freq  = 44100;
-            
+            var freq = 44100;
+
             var clipLen = freq * toneDuration;
-            
-            var clip = AudioClip.Create("RewardTone", (int) clipLen, 1, freq ,
-                true, 
+
+            var clip = AudioClip.Create("RewardTone", (int)clipLen, 1, freq,
+                true,
                 data =>
                 {
                     var count = 0;
                     while (count < data.Length)
                     {
-                        data[count] = Mathf.Sin(2 * Mathf.PI * toneFrequency * position / freq );
+                        data[count] = Mathf.Sin(2 * Mathf.PI * toneFrequency * position / freq);
                         position++;
                         count++;
                     }
@@ -468,36 +486,36 @@ namespace DefaultNamespace
                 noteString, toneFrequency, toneDuration, waitDuration, clip, valveOpenDuration
                 );
         }
-        
+
         private void SetupCue(XElement element)
         {
             CueActive = true;
-            
+
             var tone = Utils.FindElementByName(element, "tone");
             var note = Utils.FindElementByName(element, "note");
             var timer = Utils.FindElementByName(element, "timer");
             var valve = Utils.FindElementByName(element, "valve");
-            
-            
+
+
             var toneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
             var toneDuration = float.Parse(tone.Attribute("duration")!.Value);
             var noteString = note.Attribute("text")!.Value;
             var waitDuration = float.Parse(timer.Attribute("duration")!.Value);
             var valveOpenDuration = float.Parse(valve.Attribute("duration")!.Value);
-            
+
             var position = 0;
-            var freq  = 44100;
-            
+            var freq = 44100;
+
             var clipLen = freq * toneDuration;
-            
-            var clip = AudioClip.Create("RewardTone", (int) clipLen, 1, freq ,
-                true, 
+
+            var clip = AudioClip.Create("RewardTone", (int)clipLen, 1, freq,
+                true,
                 data =>
                 {
                     var count = 0;
                     while (count < data.Length)
                     {
-                        data[count] = Mathf.Sin(2 * Mathf.PI * toneFrequency * position / freq );
+                        data[count] = Mathf.Sin(2 * Mathf.PI * toneFrequency * position / freq);
                         position++;
                         count++;
                     }
@@ -508,13 +526,13 @@ namespace DefaultNamespace
             );
         }
 
-        private void SetupPunish(XElement element, XElement cfg)
+        private void SetupTimeOut(XElement element, XElement cfg)
         {
             var tone = Utils.FindElementByName(element, "tone");
             var note = Utils.FindElementByName(element, "note");
             var timer = Utils.FindElementByName(element, "timer");
             var sprite = Utils.FindElementByName(element, "sprite");
-            
+
             var toneFrequency = int.Parse(tone.Attribute("frequency")!.Value);
             var toneDuration = float.Parse(tone.Attribute("duration")!.Value);
             var noteString = note.Attribute("text")!.Value;
@@ -523,14 +541,14 @@ namespace DefaultNamespace
                 .Select(x => float.Parse(x) / 255).ToArray();
             var backgroundColor = new Color(spriteColor[0], spriteColor[1], spriteColor[2]);
             var backgroundDuration = float.Parse(sprite.Attribute("duration")!.Value);
-            
+
             var position = 0;
-            var freq  = 44100;
-            
+            var freq = 44100;
+
             var clipLen = freq * toneDuration;
 
-            var clip = AudioClip.Create("PunishTone", (int) clipLen, 1, freq,
-                true, 
+            var clip = AudioClip.Create("TimeoutTone", (int)clipLen, 1, freq,
+                true,
                 data =>
             {
                 var count = 0;
@@ -542,11 +560,11 @@ namespace DefaultNamespace
                 }
             }, newPosition => position = newPosition);
 
-            Punish = new FeedbackObject(
+            TimeOut = new FeedbackObject(
                 noteString, toneFrequency, toneDuration, waitDuration, clip, backgroundColor, backgroundDuration
                 );
-            
-            feedbackCanvas.GetComponentInChildren<Image>().color = Punish.BackgroundColor;
+
+            feedbackCanvas.GetComponentInChildren<Image>().color = TimeOut.BackgroundColor;
         }
 
         private void PrepareScene(XElement element)
@@ -566,8 +584,8 @@ namespace DefaultNamespace
                     case "correction-loop":
                         CorrectionLoopActive = bool.Parse(e.Attribute("active")!.Value);
                         break;
-                    case "punish-on-empty":
-                        PunishOnEmpty = bool.Parse(e.Attribute("active")!.Value);
+                    case "timeout-on-empty":
+                        TimeOutOnEmpty = bool.Parse(e.Attribute("active")!.Value);
                         break;
                     case "no-input":
                         NoInputRequired = bool.Parse(e.Attribute("active")!.Value);
@@ -584,15 +602,15 @@ namespace DefaultNamespace
                             case 2:
                                 _gameCanvas = dualGameCanvas;
                                 _gamePanelRectTransform = _dualPanelRectTransform;
-                                
-                                
+
+
                                 try
                                 {
                                     var top = float.Parse(e.Attribute("top")!.Value);
                                     var bottom = float.Parse(e.Attribute("bottom")!.Value);
                                     var left = float.Parse(e.Attribute("left")!.Value);
                                     var right = float.Parse(e.Attribute("right")!.Value);
-                                    
+
                                     var minPos = new Vector2(left, bottom);
                                     var maxPos = new Vector2(right, top);
 
@@ -602,8 +620,8 @@ namespace DefaultNamespace
                                 {
                                     dualWindows.ForEach(w => w.UpdateBgImageSize(Vector2.zero, Vector2.one));
                                 }
-                                
-                                
+
+
                                 break;
                             case 4:
 
@@ -686,7 +704,7 @@ namespace DefaultNamespace
                                         (new Vector3(scWidth * 3 / 4f, scHeight * 1 / 2f, -camZPos)), dualWindows[1])
                                 };
                                 break;
-                                
+
                             case 4:
                                 if (size == "1x4")
                                 {
@@ -727,7 +745,7 @@ namespace DefaultNamespace
                                             quadWindows[3]),
                                     };
                                 }
-                                
+
                                 break;
                         }
 
@@ -764,7 +782,7 @@ namespace DefaultNamespace
         private void HandleDestroyTimer(XElement element)
         {
             if (DestroyTimer._started) return;
-            
+
             var duration = int.Parse(element.Attribute("duration")!.Value);
             var id = element.Attribute("id");
             if (id is { Value: "terminate" })
@@ -778,8 +796,9 @@ namespace DefaultNamespace
             if (!DestroyTimer.IsFinished()) return;
 
             Debug.Log("Termination time passed, saving experiment results");
+            ConnectionHandler.instance.SendStopRecording();
             _logger.SaveLogsToDisk();
-            
+
             ClearGameObjects();
             ClearScene();
             ExperimentPhase = ExperimentPhase.Preprocess;
@@ -796,35 +815,35 @@ namespace DefaultNamespace
             asset.Unload(false);
 
             prefab = ProcessObject(prefab);
-            
-            prefabs.Add(prefab); 
+
+            prefabs.Add(prefab);
         }
-        
+
         private GameObject ProcessObject(GameObject obj)
         {
             obj.AddComponent<ObjectController>();
-            
+
             if (obj.transform.childCount == 0)
             {
 
                 var rend = obj.GetComponent<MeshRenderer>();
-            
+
                 if (rend == null) return null;
-            
+
                 foreach (var material in rend.sharedMaterials)
                 {
                     material.shader = bundleShader;
                 }
-                
+
                 if (SectionCount != 2) return obj;
-                
+
                 obj.AddComponent<BoxCollider>();
-                
+
                 return obj;
             }
-            
+
             var rendInChildren = obj.GetComponentsInChildren<MeshRenderer>();
-            
+
             if (rendInChildren.Length <= 0) return null;
 
             foreach (var rendInChild in rendInChildren)
@@ -842,7 +861,7 @@ namespace DefaultNamespace
 
             return obj;
         }
-        
+
         public void GenerateNewPositions()
         {
             if (RepeatTrial)
@@ -854,36 +873,36 @@ namespace DefaultNamespace
                 }
                 return;
             };
-            
+
             ResetSpawnWindows();
-            
+
             _uniqueSpawnPositions.Clear();
-            
+
             while (true)
             {
-                
+
                 var tempArray = Enumerable.Range(0, SectionCount).OrderBy(_ => Rand.Next()).ToArray();
 
                 if (!AllowVStack)
                 {
                     if (
                         tempArray[0] == 0 && tempArray[1] == 2 ||
-                        tempArray[0] == 2 && tempArray [1] == 0 ||
+                        tempArray[0] == 2 && tempArray[1] == 0 ||
                         tempArray[0] == 1 && tempArray[1] == 3 ||
-                        tempArray[0] == 3 && tempArray [1] == 1
+                        tempArray[0] == 3 && tempArray[1] == 1
                         )
                     {
-                       continue; 
+                        continue;
                     }
-                }    
-                
+                }
+
                 for (var i = 0; i < SectionCount; i++)
                 {
                     if (!tempArray[i].Equals(_lastUniqueSpawnPositions[i])) continue;
                     _isSimilarToPrevious = true;
                     break;
                 }
-                
+
                 if (!_isSimilarToPrevious)
                 {
                     _similarToPreviousCnt = 0;
@@ -897,7 +916,7 @@ namespace DefaultNamespace
                         continue;
                     }
                 }
-                
+
                 for (var i = 0; i < SectionCount; i++)
                 {
                     _uniqueSpawnPositions.Push(tempArray[i]);
@@ -910,35 +929,35 @@ namespace DefaultNamespace
             }
 
             if (!RewardHasFixedPlace) return;
-            
+
             RewardPoint = SpawnPoints[RewardPlaceIdx];
             RewardPoint.Window.Type = ObjectType.Reward;
         }
-        
+
         public void HandleObject(XElement element)
         {
             // GenerateNewPositions();
-            
+
             var objectName = element.Attribute("bundle")?.Value.Split('/').ToList().Last();
-            
+
             var rotation = element.Attribute("rotation")!.Value.Split(',').Select(float.Parse).ToArray();
             var rotationVec = Quaternion.Euler(rotation[0], rotation[1], rotation[2]);
-            
+
             var offset = element.Attribute("offset")!.Value.Split(',').Select(float.Parse).ToArray();
             var offsetVec = new Vector3(offset[0], offset[1], offset[2]);
 
             var scaleOverride = element.Attribute("scale") != null ? float.Parse(element.Attribute("scale")!.Value) : 1;
 
-            var spawnPoint =  SpawnPoints[_uniqueSpawnPositions.Pop()];
+            var spawnPoint = SpawnPoints[_uniqueSpawnPositions.Pop()];
 
             var obj = prefabs.Find(x => string.Equals(x.name, objectName, StringComparison.CurrentCultureIgnoreCase));
             var go = Instantiate(obj, Vector3.zero, Quaternion.identity);
-            
+
             Bounds bounds;
             if (go.transform.childCount > 0)
             {
                 bounds = new Bounds(Vector3.zero, Vector3.zero);
-                
+
                 foreach (var rendInChild in go.GetComponentsInChildren<Renderer>())
                 {
                     bounds.Encapsulate(rendInChild.bounds);
@@ -948,7 +967,7 @@ namespace DefaultNamespace
             {
                 bounds = go.GetComponent<Renderer>().bounds;
             }
-            
+
             var minBound = MainCamera.WorldToScreenPoint(bounds.min);
             var maxBound = MainCamera.WorldToScreenPoint(bounds.max);
             var midBound = MainCamera.WorldToScreenPoint(bounds.center);
@@ -957,13 +976,13 @@ namespace DefaultNamespace
 
             if (SectionCount == 2)
             {
-                scaleX = Screen.width  / 2f / (Math.Abs(maxBound.x - minBound.x));
-                scaleY = Screen.height / 2f / (Math.Abs(maxBound.y - minBound.y)); 
+                scaleX = Screen.width / 2f / (Math.Abs(maxBound.x - minBound.x));
+                scaleY = Screen.height / 2f / (Math.Abs(maxBound.y - minBound.y));
             }
             else
             {
-                scaleX = _scWidthQ  / 3f / (Math.Abs(maxBound.x - minBound.x));
-                scaleY = _scHeightQ / 3f / (Math.Abs(maxBound.y - minBound.y)); 
+                scaleX = _scWidthQ / 3f / (Math.Abs(maxBound.x - minBound.x));
+                scaleY = _scHeightQ / 3f / (Math.Abs(maxBound.y - minBound.y));
             }
 
             var scale = Math.Min(scaleX, scaleY);
@@ -973,19 +992,19 @@ namespace DefaultNamespace
             go.transform.rotation = rotationVec;
 
             if (RewardHasFixedPlace) return;
-            
+
             var eId = element.Attribute("id")?.Value;
 
             var type = eId switch
             {
-                "rewarded" => ObjectType.Reward,
-                "punished" => ObjectType.Punish,
+                "reward" => ObjectType.Reward,
+                "timeout" => ObjectType.Timeout,
                 _ => ObjectType.Neutral
             };
 
             spawnPoint.Window.Type = type;
             go.GetComponent<ObjectController>().Type = type;
-            
+
         }
 
 
@@ -1027,30 +1046,37 @@ namespace DefaultNamespace
             }
             catch (Exception e)
             {
-                BlinkColor = new float[] {1f, 1f, 1f};
+                BlinkColor = new float[] { 1f, 1f, 1f };
             }
 
             // GenerateNewPositions();
             if (!RewardHasFixedPlace)
             {
                 RewardPoint = SpawnPoints[_uniqueSpawnPositions.Pop()];
-                RewardPoint.Window.Type = ObjectType.Reward; 
+                RewardPoint.Window.Type = ObjectType.Reward;
             }
-            
+
             RewardPoint.Window.StartBlinking(BlinkFrequency, BlinkColor);
         }
-        
-        
+
+
         public void SaveAndExit()
         {
-            if (!_logger.LogsSaved) _logger.SaveLogsToDisk();
 
+            if (!_logger.LogsSaved)
+            {
+                Debug.Log($"Total Reward: {FM._rewardCount}");
+                Debug.Log($"Total Time Out: {FM._TimeOutCount}");
+                _logger.SaveLogsToDisk();
+            }
+            ConnectionHandler.instance.SendIRDisable();
+            ConnectionHandler.instance.SendStopRecording();
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
             Application.Quit();
 #endif
         }
-        
+
     }
 }

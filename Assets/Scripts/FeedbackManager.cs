@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -9,12 +11,11 @@ namespace DefaultNamespace
         public static FeedbackManager Instance;
         public bool IsBlinkPhaseOneReward;
         private GameManager GM;
-        private SerialComs SC;
         private TrialManager T;
         private bool _isFeedbackFirstPhase;
         private int _feedbackIssueCount;
-        public int _rewardedCount;
-        public int _punishedCount;
+        public int _rewardCount;
+        public int _TimeOutCount;
 
         private void Awake()
         {
@@ -31,7 +32,6 @@ namespace DefaultNamespace
         private void Start()
         {
             GM = GameManager.Instance;
-            SC = SerialComs.Instance;
             T = TrialManager.Instance;
             InitialSetup();
         }
@@ -39,8 +39,8 @@ namespace DefaultNamespace
         public void InitialSetup()
         {
             _feedbackIssueCount = 0;
-            _rewardedCount = 0;
-            _punishedCount = 0;
+            _rewardCount = 0;
+            _TimeOutCount = 0;
             IsBlinkPhaseOneReward = false;
             _isFeedbackFirstPhase = true;
         }
@@ -65,8 +65,8 @@ namespace DefaultNamespace
                         IssueReward();
                     }
                     break;
-                case ExperimentPhase.Punish:
-                    IssuePunish();
+                case ExperimentPhase.Timeout:
+                    IssueTimeOut();
                     break;
             }
         }
@@ -76,42 +76,58 @@ namespace DefaultNamespace
             if (!GM.InitialRewardsActive)
             {
                 GM.ExperimentPhase = ExperimentPhase.Trial;
+                ConnectionHandler.instance.SendRewardAndTimeOutDisable();
                 return;
             };
-            
+
             if (!GM.Timer._started)
             {
                 Debug.Log($"Commencing habituation reward #{++_feedbackIssueCount} from " +
                           $"{GM.InitialRewardsCount}");
-                
-                GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
 
+                GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
+                ConnectionHandler.instance.SendRewardEnable();
+                print(GM.NoInputRequired);
+                if(GM.NoInputRequired)
+                {
+                    StartCoroutine(DisableRewardAndTimeOut());
+                }
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
-                    if (SC.ArduinoConnected)
-                    {
-                        SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
-                    }
-                    else
-                    {
-                        Debug.Log("Connection to arduino not established.");
-                    }
+
+                    // if (SC.ArduinoConnected)
+                    // {
+                    //     SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+                    //     ConnectionHandler.instance.SendRewardEnable();
+                    // }
+                    // else
+                    // {
+                    //     Debug.Log("Connection to arduino not established.");
+                    // }
                 }
 
                 Debug.Log(GM.Reward.Note);
-                
+
                 GM.Timer.Begin(GM.Reward.WaitDuration);
             }
-            
+
             if (!GM.Timer.IsFinished()) return;
 
             if (_feedbackIssueCount < GM.InitialRewardsCount) return;
-            
+
             _feedbackIssueCount = 0;
-            
+
             GM.ExperimentPhase = ExperimentPhase.Trial;
+            if(!GM.NoInputRequired)
+                ConnectionHandler.instance.SendRewardAndTimeOutDisable();
+
+
         }
-        
+        public IEnumerator DisableRewardAndTimeOut()
+        {
+            yield return new WaitForSeconds(3);
+            ConnectionHandler.instance.SendRewardAndTimeOutDisable();
+        }
         public void IssueCue()
         {
             if (!GM.CueActive)
@@ -119,33 +135,35 @@ namespace DefaultNamespace
                 GM.ExperimentPhase = ExperimentPhase.HabituationReward;
                 return;
             }
-            
+
             if (!GM.Timer._started)
             {
                 GM.AudioSource.PlayOneShot(GM.Cue.AudioClip);
-            
+                ConnectionHandler.instance.SendRewardEnable();
+
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
-                    if (SC.ArduinoConnected)
-                    {
-                        SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
-                    }
-                    else
-                    {
-                        Debug.Log("Connection to arduino not established.");
-                    }
+                    // if (SC.ArduinoConnected)
+                    // {
+                    //     SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+                    //     ConnectionHandler.instance.SendRewardEnable();
+                    // }
+                    // else
+                    // {
+                    //     Debug.Log("Connection to arduino not established.");
+                    // }
                 }
-            
+
                 Debug.Log(GM.Cue.Note);
 
                 GM.Timer.Begin(GM.Cue.WaitDuration);
             }
 
             if (!GM.Timer.IsFinished()) return;
-            
+
             GM.ExperimentPhase = ExperimentPhase.HabituationReward;
         }
-        
+
         public void IssueReward()
         {
             if (!GM.Timer._started)
@@ -153,7 +171,7 @@ namespace DefaultNamespace
                 GM.InputReceived = true;
                 GM.TrialSucceeded = true;
                 _isFeedbackFirstPhase = true;
-                
+
                 if (GM.RepeatTrial)
                 {
                     GM.RepeatTrial = false;
@@ -161,24 +179,29 @@ namespace DefaultNamespace
                 }
                 else
                 {
-                    _rewardedCount++;
+                    _rewardCount++;
                 }
 
                 GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
-            
+                ConnectionHandler.instance.SendRewardEnable();
+                if(GM.NoInputRequired)
+                {
+                    StartCoroutine(DisableRewardAndTimeOut());
+                }
                 if (Application.platform.Equals(RuntimePlatform.Android))
                 {
-                    if (SC.ArduinoConnected)
-                    {
+                    // if (SC.ArduinoConnected)
+                    // {
 
-                        var coefficient= GM.InTwoPhaseBlink ? 2 : 1;
-                        
-                        SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration * coefficient}");
-                    }
-                    else
-                    {
-                        Debug.Log("Connection to arduino not established.");
-                    }
+                    //     var coefficient = GM.InTwoPhaseBlink ? 2 : 1;
+
+                    //     SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration * coefficient}");
+                    //     ConnectionHandler.instance.SendRewardEnable();
+                    // }
+                    // else
+                    // {
+                    //     Debug.Log("Connection to arduino not established.");
+                    // }
                 }
 
                 Debug.Log(GM.Reward.Note);
@@ -187,7 +210,7 @@ namespace DefaultNamespace
                 {
                     GM.ClearGameObjects();
                 }
-                
+
                 GM.Timer.Begin(GM.NoInputRequired
                     ? GM.Reward.WaitDuration + GM.NoInputWait
                     : GM.Reward.WaitDuration);
@@ -207,10 +230,12 @@ namespace DefaultNamespace
             T.CurTrialFinished = true;
             if (!GM.FirstTrialSucceeded) GM.FirstTrialSucceeded = true;
             GM.ExperimentPhase = ExperimentPhase.Trial;
+            if(!GM.NoInputRequired)
+                ConnectionHandler.instance.SendRewardAndTimeOutDisable();
         }
-        
-        
-        
+
+
+
         public void IssuePhaseOneReward()
         {
             if (!GM.Timer._started)
@@ -226,7 +251,7 @@ namespace DefaultNamespace
             {
                 GM.RewardPoint.Window.StartBlinking(GM.BlinkFrequency, GM.BlinkColor);
             }
-            
+
             GM.InputReceived = false;
             GM.ExperimentPhase = ExperimentPhase.Wait;
         }
@@ -234,24 +259,25 @@ namespace DefaultNamespace
         private void IssueSimpleReward()
         {
             GM.AudioSource.PlayOneShot(GM.Reward.AudioClip);
-            
-            GM.ClearGameObjects();
-            
-            if (!Application.platform.Equals(RuntimePlatform.Android)) return;
-            
-            if (SC.ArduinoConnected)
-            {
-                SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
-            }
-            else
-            {
-                Debug.Log("Connection to arduino not established.");
-            }
-        }
-        
-        
 
-        public void IssuePunish()
+            GM.ClearGameObjects();
+
+            ConnectionHandler.instance.SendRewardEnable();
+            if (!Application.platform.Equals(RuntimePlatform.Android)) return;
+            // if (SC.ArduinoConnected)
+            // {
+            //     SC.SendMessageToArduino($"reward{GM.Reward.ValveOpenDuration}");
+            //     ConnectionHandler.instance.SendRewardEnable();
+            // }
+            // else
+            // {
+            //     Debug.Log("Connection to arduino not established.");
+            // }
+        }
+
+
+
+        public void IssueTimeOut()
         {
             IsBlinkPhaseOneReward = false;
             if (!GM.Timer._started)
@@ -261,26 +287,26 @@ namespace DefaultNamespace
 
                 if (!GM.RepeatTrial)
                 {
-                    _punishedCount++;
+                    _TimeOutCount++;
                 }
-                
-                Debug.Log(GM.Punish.Note);
 
-                GM.AudioSource.PlayOneShot(GM.Punish.AudioClip);
-            
+                Debug.Log(GM.TimeOut.Note);
+
+                GM.AudioSource.PlayOneShot(GM.TimeOut.AudioClip);
+
                 GM.feedbackCanvas.SetActive(true);
-            
+
                 GM.ClearGameObjects();
-                
-                GM.Timer.Begin(GM.Punish.WaitDuration);
+
+                GM.Timer.Begin(GM.TimeOut.WaitDuration);
             }
 
-            if (_isFeedbackFirstPhase && GM.Timer.TimePassedInSeconds() >= GM.Punish.BackgroundDuration)
+            if (_isFeedbackFirstPhase && GM.Timer.TimePassedInSeconds() >= GM.TimeOut.BackgroundDuration)
             {
                 GM.feedbackCanvas.SetActive(false);
                 _isFeedbackFirstPhase = false;
             }
-            
+
             if (!GM.Timer.IsFinished()) return;
 
             T.CurTrialFinished = true;
@@ -290,8 +316,8 @@ namespace DefaultNamespace
                 GM.RepeatTrial = true;
                 Debug.Log("Entered Correction Loop");
             }
-            
             GM.ExperimentPhase = ExperimentPhase.Trial;
+            ConnectionHandler.instance.SendRewardAndTimeOutDisable();
         }
     }
 }

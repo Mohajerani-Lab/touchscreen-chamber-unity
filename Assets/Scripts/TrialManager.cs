@@ -50,9 +50,11 @@ namespace DefaultNamespace
             
             if (_curTrialNumber >= GM.TrialEvents.Count)
             {
-                Debug.Log($"Total Rewarded: {FM._rewardedCount}");
-                Debug.Log($"Total Punished: {FM._punishedCount}");
+                Debug.Log($"Total Reward: {FM._rewardCount}");
+                Debug.Log($"Total Time Out: {FM._TimeOutCount}");
+                ConnectionHandler.instance.SendStopRecording();
                 _logger.SaveLogsToDisk();
+                _logger.ClearLogObjects();
                 GM.ExperimentPhase = ExperimentPhase.Preprocess;
                 return;
             }
