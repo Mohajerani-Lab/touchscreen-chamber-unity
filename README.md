@@ -62,9 +62,11 @@ You have two options to set up the application:
 
 2. Transfer the APK to your tablet and install it.
 
-3. Download the configurations and sample date from the [latest release](releases/latest/download/touchscreen-chamber-data.zip).
+3. Download the configurations and sample date from the [latest release](/releases/latest/download/touchscreen-chamber-data.zip).
 
-4. Ensure the Unity app and PiController are both connected to the same network to enable communication.
+4. Put the content of the extracted file of the previous step at `/storage/emulated/0/TouchScreen-Trial-Game` path of the tablet.
+
+5. Ensure the Unity app and PiController are both connected to the same network to enable communication.
 
 ## PiController Integration
 
