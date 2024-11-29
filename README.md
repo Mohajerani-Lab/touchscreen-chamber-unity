@@ -58,7 +58,7 @@ You have two options to set up the application:
 
 ### Option 2: Download the Pre-built APK
 
-1. Download the latest APK from the [releases page](https://github.com/Mohajerani-Lab/touchscreen-chamber-unity/releases/latest)).
+1. Download the latest APK from the [releases page](https://github.com/Mohajerani-Lab/touchscreen-chamber-unity/releases/latest).
 
 2. Transfer the APK to your tablet and install it.
 
