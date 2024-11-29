@@ -58,11 +58,11 @@ You have two options to set up the application:
 
 ### Option 2: Download the Pre-built APK
 
-1. Download the latest APK from the [releases page](/releases/latest).
+1. Download the latest APK from the [releases page](https://github.com/Mohajerani-Lab/touchscreen-chamber-unity/releases/latest)).
 
 2. Transfer the APK to your tablet and install it.
 
-3. Download the configurations and sample date from the [latest release](/releases/latest/download/touchscreen-chamber-data.zip).
+3. Download the configurations and sample date from the [latest release](https://github.com/Mohajerani-Lab/touchscreen-chamber-unity/releases/latest/download/touchscreen-chamber-data.zip).
 
 4. Put the content of the extracted file of the previous step at `/storage/emulated/0/TouchScreen-Trial-Game` path of the tablet.
 
