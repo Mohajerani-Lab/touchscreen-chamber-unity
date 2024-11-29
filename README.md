@@ -58,11 +58,13 @@ You have two options to set up the application:
 
 ### Option 2: Download the Pre-built APK
 
-1. Download the latest APK from the [releases page](https://github.com/Mohajerani-Lab/touchscreen-chamber-unity/releases/latest).
+1. Download the latest APK from the [releases page](/releases/latest).
 
 2. Transfer the APK to your tablet and install it.
 
-3. Ensure the Unity app and PiController are both connected to the same network to enable communication.
+3. Download the configurations and sample date from the [latest release](releases/latest/download/touchscreen-chamber-data.zip).
+
+4. Ensure the Unity app and PiController are both connected to the same network to enable communication.
 
 ## PiController Integration
 
