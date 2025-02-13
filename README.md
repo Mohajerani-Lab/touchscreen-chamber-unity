@@ -1,9 +1,8 @@
-
 # Touchscreen Chamber Unity Project
 
 This Unity-based project, developed by the Mohajerani Lab, is designed for operant conditioning experiments with touchscreen-enabled behavioral studies in rodents. The Unity application interfaces with a Raspberry Pi running the [PiController](https://github.com/AmirHoseinMazrooei/PiController) project to enable seamless control of connected hardware, including stimuli presentation and reward dispensing.
 
-The experimental results for the paper _Assessing Cognitive Flexibility in Mice Using a Custom-Built Touchscreen Chamber (Pais et al., 2024)_ can be found in the [ExperimentResults](/ExperimentResults/) folder.
+The experimental results for the paper [_Assessing Cognitive Flexibility in Mice Using a Custom-Built Touchscreen Chamber (Pais et al., 2024)_](https://www.frontiersin.org/journals/behavioral-neuroscience/articles/10.3389/fnbeh.2025.1536458/full) can be found in the [ExperimentResults](/ExperimentResults/) folder.
 
 ## Table of Contents
 
